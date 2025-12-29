@@ -60,7 +60,7 @@ def login():
         # 1. Check Student
         if student and student.student_password == password:
             user_to_login = student
-            target_route = 'user_view.home'
+            target_route = 'student_view.home' 
             
         # 2. Check Organizer
         elif organizer and organizer.organizer_password == password:
@@ -91,4 +91,5 @@ def login():
 def logout():
     logout_user()
     flash('You have been logged out.', 'info')
+
     return redirect(url_for('auth.index'))
