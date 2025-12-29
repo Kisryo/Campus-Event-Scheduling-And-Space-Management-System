@@ -2,7 +2,6 @@ from flask import Flask
 from flask_wtf import CSRFProtect
 from flask_login import LoginManager
 from models import db
-import stripe
 import os
 
 # Initialize Flask app
@@ -30,10 +29,6 @@ csrf = CSRFProtect(app)
 
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
-
-# Stripe configuration
-app.config['STRIPE_SECRET_KEY'] = 'sk_test_51PMWarFeLdpgIRLCcD1YhpdSwJESnWBcMmxvtFXvlx9aEfh11QwoCY3eaSMi43B7Ho1BBIld9qMDAaCRIsVbUZpw00lInyAKH0'
-stripe.api_key = app.config['STRIPE_SECRET_KEY']
 
 # ========================================================
 #  USER LOADER (Checks all 4 Tables)
@@ -77,4 +72,5 @@ app.register_blueprint(user_view, url_prefix='/student')        # URL: /student/
 
 # Run the app
 if __name__ == "__main__":
+
     app.run(debug=True)
