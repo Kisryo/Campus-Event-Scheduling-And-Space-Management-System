@@ -25,7 +25,7 @@ def dashboard():
         Event.organizer_id == current_user.organizer_id
     ).order_by(Booking.booking_date.desc()).limit(5).all()
 
-    return render_template('organizer_dashboard.html', 
+    return render_template('organizer/dashboard.html', 
                            user=current_user,
                            events_count=my_events_count,
                            bookings_count=my_bookings_count,
@@ -69,14 +69,14 @@ def create_event():
             flash('Error creating event. Please check your inputs.', 'danger')
             print(e)
 
-    return render_template('create_event.html', user=current_user, categories=categories, rooms=rooms)
+    return render_template('organizer/create_event.html', user=current_user, categories=categories, rooms=rooms)
 
 @organizer_view.route('/my-events')
 @login_required
 def my_events():
     # Only show events created by this organizer
     events = Event.query.filter_by(organizer_id=current_user.organizer_id).all()
-    return render_template('my_events.html', user=current_user, events=events)
+    return render_template('organizer/my_events.html', user=current_user, events=events)
 
 @organizer_view.route('/bookings/<int:event_id>')
 @login_required
@@ -86,5 +86,4 @@ def event_bookings(event_id):
     
     bookings = Booking.query.filter_by(event_id=event.event_id).all()
     
-
-    return render_template('event_bookings.html', user=current_user, event=event, bookings=bookings)
+    return render_template('organizer/event_bookings.html', user=current_user, event=event, bookings=bookings)
