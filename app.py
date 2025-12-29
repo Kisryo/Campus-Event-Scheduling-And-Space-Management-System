@@ -60,17 +60,14 @@ from auth import auth
 from admin_view import admin_view
 from organizer_view import organizer_view
 from lecturer_view import lecturer_view
-from user_view import user_view 
+from student_view import student_view 
 
 app.register_blueprint(auth, url_prefix='/')
+app.register_blueprint(admin_view, url_prefix='/admin')
+app.register_blueprint(organizer_view, url_prefix='/organizer')
+app.register_blueprint(lecturer_view, url_prefix='/lecturer')
+app.register_blueprint(student_view, url_prefix='/student') 
 
-# Registering views with specific prefixes
-app.register_blueprint(admin_view, url_prefix='/admin')         # URL: /admin/dashboard
-app.register_blueprint(organizer_view, url_prefix='/organizer') # URL: /organizer/dashboard
-app.register_blueprint(lecturer_view, url_prefix='/lecturer')   # URL: /lecturer/dashboard
-app.register_blueprint(user_view, url_prefix='/student')        # URL: /student/home
-
-# Run the app
 if __name__ == "__main__":
-
     app.run(debug=True)
+
