@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+
+<head>
+    <meta charser="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=divice-width,initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login_signup.css') }}">
+    <link rel="icon" href="https://www.mmu.edu.my/favicon.ico" type="image/x-icon" />
+    <title>Sign Up</title>
+</head>
+  
+<body>
+    <!-- Include the flash messages template -->
+    {% include 'flash_messages.html' %}
+    
+    <div class="wrapper">
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.csrf_token }}
+            <h1>Sign Up</h1>
+            <div class="input-box">
+                {{ form.user_id() }}
+            </div>
+            <div class="input-box">
+                {{ form.user_name() }}
+            </div>
+            <div class="input-box">
+                {{ form.user_email() }}
+            </div>
+            <div class="input-box">
+                {{ form.user_phone() }}
+            </div>
+            <div class="input-box">
+                {{ form.user_pwd() }}
+            </div>
+            <div class="input-box">
+                {{ form.confirm_pwd() }}
+            </div>
+                        
+            <div class="login">
+                {{ form.signup_submit() }}
+            </div>
+        </form>
+    </div>
+</body>

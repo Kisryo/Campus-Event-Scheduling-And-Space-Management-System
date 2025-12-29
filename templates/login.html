@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="icon" href="https://www.mmu.edu.my/favicon.ico" type="image/x-icon" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login_signup.css') }}" />
+    <title>Login</title>
+  </head>
+
+  <body>
+    <div class="wrapper">
+      <!-- Login field -->
+      <form action="{{ url_for('auth.login') }}" method="POST">
+        <h1>Login Page</h1>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+        <div class="input-box">
+          <input type="text" placeholder="ID" name="id" required />
+        </div>
+        <div class="input-box">
+          <input type="password" placeholder="Password" name="password" required/>
+        </div>
+
+        <div class="login">
+          <button type="submit">Login</button>
+        </div>
+
+        <!-- Link to signup.html -->
+        <div class="register-link">
+          <p>
+            Don't have an account?
+            <a href="{{ url_for('auth.signup') }}">Sign Up</a>
+          </p>
+        </div>
+
+        <!-- Display flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <p class="alert alert-{{ category }}">{{ message }}</p>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+      </form>
+    </div>
+  </body>
+</html>

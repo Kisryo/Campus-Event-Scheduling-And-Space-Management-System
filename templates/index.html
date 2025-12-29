@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="{{ url_for('static', filename= 'css/base.css')}}">
+    <link rel="icon" href="https://www.mmu.edu.my/favicon.ico" type="image/x-icon">
+    <title>CESMS</title>
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; }
+        body { font-family: 'Times New Roman'; display: flex; justify-content: center; align-items: center; }
+        .welcome {
+            position: relative; width: 100vw; height: 100vh;
+            display: flex; justify-content: center; align-items: center; text-align: center;
+            background-image: url('{{ url_for("static", filename="images/index.jpg") }}');
+            background-size: cover; background-position: center;
+        }
+        .welcome-content { max-width: max-content; padding: 20px; }
+
+        /* Box only around welcome message */
+        .welcome-box {
+            background-color: rgb(255, 255, 255); /* semi-transparent dark box */
+            padding: 20px 30px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+
+        .welcome-box p {
+            font-size: 3rem;
+            color: rgba(66, 157, 209, 0.95);
+            margin: 0;
+            animation: fadeIn 2.5s ease;
+        }
+
+        .welcome-button { margin-top: 20px; animation: buttonFadeIn 3s ease forwards; opacity: 0; }
+        .welcome-button a {
+            display: inline-block; padding: 12px 24px; margin-top: 20px;
+            background-color: #083b6b; color: white; text-decoration: none;
+            border-radius: 25px; font-size: 18px; font-weight: 700;
+            cursor: pointer; transition: background-color 0.3s ease;
+        }
+        .welcome-button a:hover { background-color: black; border-color: black; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes buttonFadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Flash message style: plain small text */
+        .flash-message {
+            margin-top: 15px;
+            font-size: 0.85rem;   /* smaller font size */
+            color: white;         /* plain text */
+            font-weight: normal;
+        }
+    </style>
+</head>
+<body>
+    <div class="welcome">
+        <div class="welcome-content">
+            <!-- Box covers only welcome message -->
+            <div class="welcome-box">
+                <p>Campus Event Scheduling and Space Management System (CESMS)</p>
+            </div>
+
+            <!-- Login button outside the box -->
+            <div class="welcome-button">
+                <a href="{{ url_for('auth.login') }}" aria-label="Login to MMUEvent">Login</a>
+            </div>
+
+            <!-- Flash messages (outside the box, small text) -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <p class="flash-message">{{ message }}</p>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+        </div>
+    </div>
+</body>
+</html>
