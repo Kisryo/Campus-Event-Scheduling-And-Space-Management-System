@@ -1,15 +1,15 @@
 from flask import Blueprint, render_template, url_for, request, redirect, flash
 from flask_login import login_required, current_user
-from models import db, Student, Event, Registration, Category, Rooms, Organizer, Admin
+from models import db, Student, Event, Registration, Category, Organizer
 from datetime import datetime
 from forms import ResetPasswordForm 
 
-user_view = Blueprint('user_view', __name__)
+student_view = Blueprint('student_view', __name__)
 
 # ========================================================
 # 1. HOME PAGE
 # ========================================================
-@user_view.route('/home')
+@student_view.route('/home')
 @login_required
 def home():
     # Security check: Ensure user is a Student
@@ -19,7 +19,7 @@ def home():
     current_dt = datetime.now()
     categories = Category.query.all()
 
-    # Upcoming Events (Published & Future)
+    # Upcoming Events
     upcoming_events = Event.query.filter(
         Event.start_datetime >= current_dt,
         Event.event_status == 'Upcoming' 
@@ -41,10 +41,9 @@ def home():
 # ========================================================
 # 2. EVENTS LISTING & FILTERING
 # ========================================================
-@user_view.route('/events')
+@student_view.route('/events')
 @login_required
 def events():
-    # Get Filters
     category_id = request.args.get('category')
     search_query = request.args.get('search', '').strip()
     sort = request.args.get('sort', '')
@@ -52,21 +51,16 @@ def events():
     current_dt = datetime.now()
     categories = Category.query.all()
 
-    # Base Query
     query = Event.query.filter(Event.event_status == 'Upcoming')
 
-    # 1. Filter by Category
     if category_id:
         query = query.filter(Event.category_id == category_id)
 
-    # 2. Filter by Search (Title)
     if search_query:
         query = query.filter(Event.title.ilike(f'%{search_query}%'))
 
-    # 3. Filter Expired (Default: Hide past events)
     query = query.filter(Event.start_datetime >= current_dt)
 
-    # 4. Sorting
     if sort == 'date':
         query = query.order_by(Event.start_datetime.asc())
     elif sort == 'a-z':
@@ -74,10 +68,8 @@ def events():
     elif sort == 'z-a':
         query = query.order_by(Event.title.desc())
     else:
-        # Default sort
         query = query.order_by(Event.start_datetime.asc())
 
-    # Pagination
     page = request.args.get('page', 1, type=int)
     events_paginated = query.paginate(page=page, per_page=9)
 
@@ -92,18 +84,16 @@ def events():
 # ========================================================
 # 3. EVENT DETAILS & REGISTRATION
 # ========================================================
-@user_view.route('/event/<int:event_id>')
+@student_view.route('/event/<int:event_id>')
 @login_required
 def event_details(event_id):
     event = Event.query.get_or_404(event_id)
     
-    # Check if student is already registered
     is_registered = Registration.query.filter_by(
         student_id=current_user.student_id, 
         event_id=event_id
     ).first()
 
-    # Check available spots
     registered_count = Registration.query.filter_by(event_id=event_id).count()
     spots_left = event.capacity - registered_count
 
@@ -114,12 +104,11 @@ def event_details(event_id):
                            spots_left=spots_left)
 
 
-@user_view.route('/register/<int:event_id>', methods=['POST'])
+@student_view.route('/register/<int:event_id>', methods=['POST'])
 @login_required
 def register_event(event_id):
     event = Event.query.get_or_404(event_id)
 
-    # Check if already registered
     existing = Registration.query.filter_by(
         student_id=current_user.student_id, 
         event_id=event_id
@@ -127,15 +116,13 @@ def register_event(event_id):
 
     if existing:
         flash('You are already registered for this event.', 'info')
-        return redirect(url_for('user_view.event_details', event_id=event_id))
+        return redirect(url_for('student_view.event_details', event_id=event_id))
 
-    # Check capacity
     count = Registration.query.filter_by(event_id=event_id).count()
     if count >= event.capacity:
         flash('Sorry, this event is fully booked.', 'danger')
-        return redirect(url_for('user_view.event_details', event_id=event_id))
+        return redirect(url_for('student_view.event_details', event_id=event_id))
 
-    # Register Student
     new_reg = Registration(
         student_id=current_user.student_id,
         event_id=event_id,
@@ -146,10 +133,10 @@ def register_event(event_id):
     db.session.commit()
 
     flash('Successfully registered for event!', 'success')
-    return redirect(url_for('user_view.my_registrations'))
+    return redirect(url_for('student_view.my_registrations'))
 
 
-@user_view.route('/cancel-registration/<int:event_id>', methods=['POST'])
+@student_view.route('/cancel-registration/<int:event_id>', methods=['POST'])
 @login_required
 def cancel_registration(event_id):
     reg = Registration.query.filter_by(
@@ -162,4 +149,4 @@ def cancel_registration(event_id):
         db.session.commit()
         flash('Registration cancelled.', 'info')
     
-    return redirect(url_for('user_view.my_registrations'))
+    return redirect(url_for('student_view.my_registrations'))
