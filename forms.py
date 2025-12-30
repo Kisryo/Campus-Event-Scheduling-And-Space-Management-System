@@ -10,23 +10,23 @@ from flask_wtf.file import FileField, FileAllowed
 from models import Student, Lecturer, Organizer, Admin
 
 # ========================================================
-# 1. SIGNUP FORM (For Students)
+# 1. SIGNUP FORM (For Students Only)
 # ========================================================
 class SignupForm(FlaskForm):
     user_id = StringField(
         'Student ID',
-        validators=[DataRequired(), Length(min=10, max=10, message="ID must be 10 characters long")],
+        validators=[DataRequired(), Length(min=10, max=10, message="ID must be exactly 10 characters.")],
         render_kw={"placeholder": "Student ID"}
     )
     user_name = StringField(
         'Name',
         validators=[DataRequired()],
-        render_kw={"placeholder": "Name"}
+        render_kw={"placeholder": "Full Name"}
     )
     user_email = StringField(
         'Email',
         validators=[DataRequired()],
-        render_kw={"placeholder": "Email"}
+        render_kw={"placeholder": "Student Email"}
     )
     user_phone = StringField(
         'Phone number',
@@ -35,7 +35,7 @@ class SignupForm(FlaskForm):
     )
     user_pwd = PasswordField(
         'Password',
-        validators=[DataRequired(), EqualTo('confirm_pwd', message='Both passwords must match.')],
+        validators=[DataRequired(), EqualTo('confirm_pwd', message='Passwords must match.')],
         render_kw={"placeholder": "Password"}
     )
     confirm_pwd = PasswordField(
@@ -43,10 +43,10 @@ class SignupForm(FlaskForm):
         validators=[DataRequired()],
         render_kw={"placeholder": "Confirm Password"}
     )
-    signup_submit = SubmitField('Sign up')
+    signup_submit = SubmitField('Register Student')
 
     def validate_user_id(self, user_id):
-        # Check all 4 tables to ensure ID is unique
+        # Check all 4 tables to ensure ID is unique across the entire system
         id_data = user_id.data.strip()
         if (Student.query.get(id_data) or 
             Lecturer.query.get(id_data) or 
@@ -55,14 +55,14 @@ class SignupForm(FlaskForm):
             raise ValidationError("This ID already exists in the system.")
 
     def validate_user_email(self, user_email):
-        # Check allowed domains
-        allowed_domains = ["@student.mmu.edu.my", "@mmu.edu.my", "@staff.mmu.edu.my"]
+        # STRICT VALIDATION: Only allow student domain for this form
+        allowed_domains = ["@student.mmu.edu.my"]
         email = user_email.data.lower().strip()
 
         if not any(email.endswith(domain) for domain in allowed_domains):
-            raise ValidationError("Email must be a valid university email.")
+            raise ValidationError("Students must use a valid @student.mmu.edu.my email.")
 
-        # Check unique email across all tables
+        # Check all 4 tables to ensure Email is unique
         if (Student.query.filter_by(student_email=email).first() or
             Lecturer.query.filter_by(lecturer_email=email).first() or
             Organizer.query.filter_by(organizer_email=email).first() or
@@ -71,7 +71,7 @@ class SignupForm(FlaskForm):
 
 
 # ========================================================
-# 2. RESET PASSWORD FORM
+# 2. PASSWORD RESET FORM (For Profile Page)
 # ========================================================
 class ResetPasswordForm(FlaskForm):
     old_pwd = PasswordField(
@@ -96,7 +96,7 @@ class ResetPasswordForm(FlaskForm):
 
 
 # ========================================================
-# 3. EVENT FORM (Simplified & Fixed Date/Time)
+# 3. EVENT CREATION FORM (For Organizers)
 # ========================================================
 class EventForm(FlaskForm):
     event_name = StringField(
@@ -113,7 +113,7 @@ class EventForm(FlaskForm):
         validators=[DataRequired()]
     )
     
-    # FIXED: Combined Date & Time into one field to match Database
+    # Combined Date & Time into one field
     event_start = DateTimeLocalField(
         'Start Date & Time', 
         validators=[DataRequired()],
@@ -145,7 +145,11 @@ class EventForm(FlaskForm):
         validators=[DataRequired()]
     )
     
-    # Removed complex TicketList (No Stripe)
+    location_detail = StringField(
+        'Location Details',
+        validators=[DataRequired()],
+        render_kw={"placeholder": "Specific details (e.g. Building A, Zoom Link)"}
+    )
     
     submit = SubmitField('Save Event')
 
