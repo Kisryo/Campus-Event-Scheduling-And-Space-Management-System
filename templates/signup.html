@@ -2,44 +2,56 @@
 <html lang="en" dir="ltr">
 
 <head>
-    <meta charser="UTF-8">
+    <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=divice-width,initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/login_signup.css') }}">
-    <link rel="icon" href="https://www.mmu.edu.my/favicon.ico" type="image/x-icon" />
-    <title>Sign Up</title>
+    <link rel="icon" href="https://www.mmu.edu.my/favicon.ico" type="image/x-icon" />
+    <title>Student Sign Up</title>
 </head>
   
 <body>
-    <!-- Include the flash messages template -->
-    {% include 'flash_messages.html' %}
-    
     <div class="wrapper">
         <form method="POST" enctype="multipart/form-data">
             {{ form.csrf_token }}
-            <h1>Sign Up</h1>
+            
+            <h1>Student Registration</h1>
+            
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <p style="color: red; text-align: center; margin-bottom: 10px;">{{ message }}</p>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
             <div class="input-box">
-                {{ form.user_id() }}
+                {{ form.user_id(placeholder="Student ID") }}
             </div>
             <div class="input-box">
-                {{ form.user_name() }}
+                {{ form.user_name(placeholder="Full Name") }}
             </div>
             <div class="input-box">
-                {{ form.user_email() }}
+                {{ form.user_email(placeholder="Student Email") }}
             </div>
             <div class="input-box">
-                {{ form.user_phone() }}
+                {{ form.user_phone(placeholder="Phone Number") }}
             </div>
             <div class="input-box">
-                {{ form.user_pwd() }}
+                {{ form.user_pwd(placeholder="Password") }}
             </div>
             <div class="input-box">
-                {{ form.confirm_pwd() }}
+                {{ form.confirm_pwd(placeholder="Confirm Password") }}
             </div>
                         
             <div class="login">
-                {{ form.signup_submit() }}
+                {{ form.signup_submit(value="Register Student") }}
+            </div>
+            
+            <div class="register-link">
+                <p>Already have an account? <a href="{{ url_for('auth.login') }}">Login here</a></p>
             </div>
         </form>
     </div>
 </body>
+</html>
