@@ -1,0 +1,41 @@
+{% extends 'base_admin.html' %}
+{% block title %}My Event Schedule{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Club Event Schedule</h2>
+    
+    {% if events|length == 0 %}
+        <div class="alert alert-info">No scheduled events found for your club.</div>
+    {% else %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Title</th>
+                    <th>Venue</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in events %}
+                <tr>
+                    <td>{{ e.start_datetime.strftime('%d %b %Y, %I:%M %p') }}</td>
+                    <td>{{ e.title }}</td>
+                    <td>{{ e.venue_location }}</td>
+                    <td>
+                        {% if e.event_status == 'Upcoming' %}
+                            <span class="badge badge-success">Upcoming</span>
+                        {% elif e.event_status == 'Completed' %}
+                            <span class="badge badge-secondary">Completed</span>
+                        {% else %}
+                            <span class="badge badge-warning">{{ e.event_status }}</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</div>
+{% endblock %}

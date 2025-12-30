@@ -1,0 +1,41 @@
+{% extends 'base_admin.html' %}
+{% block title %}Manage Categories{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Manage Event Categories</h2>
+    {% include 'flash_messages.html' %}
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <form class="form-inline" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="action" value="add">
+                <input type="text" name="category_name" class="form-control mr-2" placeholder="New Category Name">
+                <button class="btn btn-success">Add</button>
+            </form>
+        </div>
+        <div class="col-md-6 text-right">
+            <form class="form-inline float-right">
+                <input type="search" name="search" class="form-control mr-2" placeholder="Search categories">
+                <button class="btn btn-outline-secondary">Filter</button>
+            </form>
+        </div>
+    </div>
+
+    <ul class="list-group">
+        {% for c in categories %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+            <form method="POST" class="form-inline w-100">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="category_id" value="{{ c.category_id }}">
+                
+                <input type="text" name="category_name" value="{{ c.category_name }}" class="form-control mr-2">
+                
+                <button type="submit" name="action" value="edit" class="btn btn-primary btn-sm mr-1">Update</button>
+                <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm" onclick="return confirm('Delete category?');">Delete</button>
+            </form>
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endblock %}

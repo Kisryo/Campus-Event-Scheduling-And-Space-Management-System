@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <title>{% block title %}Admin Portal | MMUEvent{% endblock %}</title>
+    
+    <link rel="icon" href="https://www.mmu.edu.my/favicon.ico" type="image/x-icon" />
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
+    <script src="https://kit.fontawesome.com/8d1db3e4f7.js" crossorigin="anonymous"></script>
+    
+    {% block head %}{% endblock %}
+
+    <style>
+        * { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f8f9fc; }
+        
+        /* Navbar Styling */
+        .topnavbar {
+            background-color: #3a8beeff;
+            box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+            padding: 0 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 70px;
+            margin-bottom: 2rem;
+        }
+
+        
+        .right ul { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; }
+        .right li { margin-left: 20px; }
+        .right a { text-decoration: none; color: #e3e4efff; font-weight: 600; font-size: 14px; transition: 0.3s; }
+        .right a:hover { color: #d7d8ddff; }
+        
+        .footer { background-color: #5091f3ff; color: #e4e5f1ff; text-align: center; padding: 20px 0; border-top: 1px solid #e3e6f0; margin-top: auto; }
+    </style>
+</head>
+<body class="d-flex flex-column" style="min-height: 100vh;">
+
+    <div class="topnavbar">
+        <div class="left">
+            <div class="logo">
+                <p>MMU<span>Event Admin</span></p>
+            </div>
+        </div>
+        <div class="right">
+            <ul>
+                <li>
+                    <a href="{{ url_for('admin_view.admin_home') }}">
+                        <i class="fas fa-fw fa-tachometer-alt"></i> Dashboard
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('auth.logout') }}" class="text-white">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <main class="container-fluid pb-5">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <div class="container my-auto">
+            <span>&copy; 2025 MMU Event Management System</span>
+        </div>
+    </footer>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

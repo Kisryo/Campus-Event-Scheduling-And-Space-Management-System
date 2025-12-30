@@ -1,0 +1,53 @@
+{% extends 'base_admin.html' %}
+{% block title %}Process Booking Requests{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Process Booking Requests</h2>
+    {% include 'flash_messages.html' %}
+    
+    <div class="card shadow-sm">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">Pending Requests</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Requester</th>
+                        <th>Event</th>
+                        <th>Room</th>
+                        <th>Date Needed</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for b in bookings %}
+                    <tr>
+                        <td>#{{ b.booking_id }}</td>
+                        <td>
+                            {% if b.req_organizer_id %}{{ b.req_organizer_id }} (Org)
+                            {% elif b.req_lecturer_id %}{{ b.req_lecturer_id }} (Lec)
+                            {% endif %}
+                        </td>
+                        <td>{{ b.event.title }}</td>
+                        <td>{{ b.room.room_name }}</td>
+                        <td>{{ b.req_start_datetime }}</td>
+                        <td>
+                            <form method="POST" class="form-inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                <input type="hidden" name="booking_id" value="{{ b.booking_id }}">
+                                <button type="submit" name="status_id" value="2" class="btn btn-success btn-sm mr-2">Approve</button>
+                                <button type="submit" name="status_id" value="3" class="btn btn-danger btn-sm">Reject</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center">No pending requests.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
