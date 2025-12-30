@@ -37,9 +37,33 @@ def home():
                            upcoming=upcoming_events, 
                            new=new_events)
 
+# ========================================================
+# 2. Profile
+# ========================================================
+
+@student_view.route('/profile', methods=['GET', 'POST'])
+@login_required
+def profile():
+    form = ResetPasswordForm()
+
+    if form.validate_on_submit():
+        # 1. Verify Old Password (Plain Text Check)
+        if current_user.student_password == form.old_pwd.data:
+            
+            # 2. Save New Password
+            current_user.student_password = form.new_pwd.data
+            db.session.commit()
+            
+            flash('Password updated successfully!', 'success')
+            return redirect(url_for('student_view.profile'))
+        else:
+            flash('Incorrect old password. Please try again.', 'danger')
+
+    return render_template('profile.html', user=current_user, form=form)
+
 
 # ========================================================
-# 2. EVENTS LISTING & FILTERING
+# 3. EVENTS LISTING & FILTERING
 # ========================================================
 @student_view.route('/events')
 @login_required
@@ -82,7 +106,7 @@ def events():
 
 
 # ========================================================
-# 3. EVENT DETAILS & REGISTRATION
+# 4. EVENT DETAILS & REGISTRATION
 # ========================================================
 @student_view.route('/event/<int:event_id>')
 @login_required
