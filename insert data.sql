@@ -1,15 +1,15 @@
 INSERT INTO Admin (admin_id, admin_name, admin_email, admin_password, admin_phone) VALUES 
-('AD01', 'Admin IT Society', 'it@staff.mmu.edu.my', 'AdminPass!01', '06-9977683' ),
-('AD02', 'Admin Music Club', 'music@staff.mmu.edu.my', 'IloveMusic@99', '06-24342687'),
-('AD03', 'Admin Volleyball Club', 'volleyball@staff.mmu.edu.my', 'Volley909', '06-9893345'),
-('AD04', 'Admin Photography Club', 'photography@staff.mmu.edu.my', 'Photo$77', '06-2234578');
+('AD01', 'Nasuha binti Azmin', 'nasuha@staff.mmu.edu.my', 'Nasuhha459', '016-3985783'),
+('AD02', 'Chai An Wen', 'anwen@staff.mmu.edu.my', 'Anwen8402', '019-74957399'),
+('AD03', 'Kavitha a/p Muthusamy', 'kavitha@staff.mmu.edu.my', 'kavitha555', '010-4639823'),
+('AD04', 'Tan Xue Yan', 'xueyan@staff.mmu.edu.my', 'xueeyyan11', '012-98320383');
 
 -- ORGANIZER (ID Format: ORxx)
 INSERT INTO Organizer (organizer_id, organizer_name, organizer_email, organizer_password, organizer_phone) VALUES 
-('OR01', 'IT Society', 'it.society@staff.mmu.edu.my', 'ItClub#2025', '011-3436769'),
-('OR02', 'Music Club', 'music.club@staff.mmu.edu.my', 'DoReMi_123', '011-38788433'),
-('OR03', 'Volleyball Club', 'volleyball.club@staff.mmu.edu.my', 'Goal!Keeper1', '011-98367443'),
-('OR04', 'Photography Club', 'photo.club@staff.mmu.edu.my', 'Shutter_Click9', '011-8765789');
+('OR01', 'IT Society', 'it.society@mmu.edu.my', 'ItClub#2025', '011-3436769'),
+('OR02', 'Music Club', 'music.club@mmu.edu.my', 'DoReMi_123', '011-38788433'),
+('OR03', 'Volleyball Club', 'volleyball.club@mmu.edu.my', 'Goal!Keeper1', '011-98367443'),
+('OR04', 'Photography Club', 'photo.club@mmu.edu.my', 'Shutter_Click9', '011-8765789');
 
 -- LECTURER (ID Format: LExx)
 INSERT INTO Lecturer (lecturer_id, lecturer_name, lecturer_email, lecturer_password, lecturer_phone) VALUES 
