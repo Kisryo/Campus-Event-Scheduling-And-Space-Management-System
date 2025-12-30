@@ -1,133 +1,102 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
-from flask_login import login_user, logout_user, login_required
-from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, Organizer, Student
+from flask import Blueprint, render_template, request, flash, redirect, url_for
+from models import Student, Admin, Organizer, Lecturer, db
+from flask_login import login_user, login_required, logout_user, current_user
+from forms import SignupForm
 
 auth = Blueprint('auth', __name__)
 
-# -----------------------------
-# Organizer Signup
-# -----------------------------
-@auth.route('/signup/organizer', methods=['GET', 'POST'])
-def signup_organizer():
-    if request.method == 'POST':
-        name = request.form.get('name')
-        email = request.form.get('email', '').strip().lower()
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
+@auth.route('/', methods=['GET'])
+def index():
+    return render_template("index.html", user=current_user)
 
-        if password != confirm_password:
-            flash('Passwords do not match.', 'danger')
-            return redirect(url_for('auth.signup_organizer'))
+@auth.route('/signup', methods=['GET', 'POST'])
+def signup():
+    form = SignupForm()
 
-        if Organizer.query.filter_by(organizer_email=email).first():
-            flash('Organizer email already registered.', 'danger')
-            return redirect(url_for('auth.signup_organizer'))
-
-        new_org = Organizer(
-            organizer_id=f"O{Organizer.query.count()+1:03}",
-            organizer_name=name,
-            organizer_email=email,
-            organizer_password=generate_password_hash(password),
-            organizer_account_status="Active"
-        )
-        db.session.add(new_org)
-        db.session.commit()
-
-        flash('Organizer account created successfully! Please log in.', 'success')
-        return redirect(url_for('auth.login'))
-
-    return render_template('signup_organizer.html')
-
-
-# -----------------------------
-# Student Signup
-# -----------------------------
-@auth.route('/signup/student', methods=['GET', 'POST'])
-def signup_student():
-    if request.method == 'POST':
-        student_id = request.form.get('student_id')
-        name = request.form.get('name')
-        email = request.form.get('email', '').strip().lower()
-        phone = request.form.get('phone')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
-
-        if password != confirm_password:
-            flash('Passwords do not match.', 'danger')
-            return redirect(url_for('auth.signup_student'))
-
-        if Student.query.filter_by(student_email=email).first():
-            flash('Student email already registered.', 'danger')
-            return redirect(url_for('auth.signup_student'))
+    if form.validate_on_submit():
+        # Check if email already exists (Optional safety check)
+        existing_student = Student.query.filter_by(student_email=form.user_email.data.lower().strip()).first()
+        if existing_student:
+            flash('Email already registered.', 'danger')
+            return render_template('signup.html', form=form)
 
         new_student = Student(
-            student_id=student_id,
-            student_name=name,
-            student_email=email,
-            student_password=generate_password_hash(password),
-            student_phone=phone,
-            student_account_status="Active"
+            student_id=form.user_id.data.strip(),
+            student_name=form.user_name.data.strip(),
+            student_email=form.user_email.data.lower().strip(),
+            student_phone=form.user_phone.data.strip(),
+            student_password=form.user_pwd.data, 
+            student_account_status='Active'
         )
-        db.session.add(new_student)
-        db.session.commit()
+        
+        try:
+            db.session.add(new_student)
+            db.session.commit()
+            flash('Account created successfully! Please log in.', 'success')
+            return redirect(url_for('auth.login'))
+        except Exception as e:
+            db.session.rollback()
+            flash('Error creating account. ID or Email may already exist.', 'danger')
+            print(f"Database Error: {e}")
 
-        flash('Student account created successfully! Please log in.', 'success')
-        return redirect(url_for('auth.login'))
+    else:
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(f"{getattr(form, field).label.text}: {error}", 'danger')
 
-    return render_template('signup_student.html')
+    return render_template('signup.html', form=form)
 
-
-# -----------------------------
-# Login
-# -----------------------------
 @auth.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
+        # CHANGED: Get 'email' instead of 'id'
         email = request.form.get('email', '').strip().lower()
         password = request.form.get('password', '')
 
-        user = None
-        role = None
-        stored_password = None
+        user_to_login = None
+        target_route = 'student_view.home' # Default fallback
 
-        organizer = Organizer.query.filter_by(organizer_email=email).first()
-        if organizer:
-            user = organizer
-            role = 'organizer'
-            stored_password = organizer.organizer_password
+        # --- QUERY BY EMAIL INSTEAD OF ID ---
+        
+        # 1. Check Student
+        student = Student.query.filter_by(student_email=email).first()
+        if student and student.student_password == password:
+            user_to_login = student
+            target_route = 'student_view.home'
+            
+        if not user_to_login:
+            # 2. Check Organizer
+            organizer = Organizer.query.filter_by(organizer_email=email).first()
+            if organizer and organizer.organizer_password == password:
+                user_to_login = organizer
+                target_route = 'organizer_view.dashboard'
+
+        if not user_to_login:
+            # 3. Check Lecturer
+            lecturer = Lecturer.query.filter_by(lecturer_email=email).first()
+            if lecturer and lecturer.lecturer_password == password:
+                user_to_login = lecturer
+                target_route = 'lecturer_view.dashboard'
+
+        if not user_to_login:
+            # 4. Check Admin
+            admin = Admin.query.filter_by(admin_email=email).first()
+            if admin and admin.admin_password == password:
+                user_to_login = admin
+                target_route = 'admin_view.admin_home'
+
+        # Perform the actual login
+        if user_to_login:
+            login_user(user_to_login, remember=True)
+            return redirect(url_for(target_route))
         else:
-            student = Student.query.filter_by(student_email=email).first()
-            if student:
-                user = student
-                role = 'student'
-                stored_password = student.student_password
+            flash('Login failed. Check your Email and password.', 'danger')
 
-        if not user:
-            flash('Account not found.', 'danger')
-            return redirect(url_for('auth.login'))
+    return render_template("login.html", user=current_user)
 
-        if check_password_hash(stored_password, password):
-            login_user(user)
-            flash('Login successful!', 'success')
-
-            if role == 'organizer':
-                return redirect(url_for('organizer_dashboard'))
-            elif role == 'student':
-                return redirect(url_for('student_dashboard'))
-        else:
-            flash('Incorrect password, try again.', 'danger')
-            return redirect(url_for('auth.login'))
-
-    return render_template('login.html')
-
-
-# -----------------------------
-# Logout
-# -----------------------------
 @auth.route('/logout')
 @login_required
 def logout():
     logout_user()
     flash('You have been logged out.', 'info')
-    return redirect(url_for('index'))
+    return redirect(url_for('auth.index'))
