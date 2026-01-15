@@ -1,0 +1,159 @@
+{% extends 'lecturer/base_lecturer.html' %}
+{% block title %}Dashboard | MMUEvent{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/lecturer_dashboard.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    
+    <div class="text-center mb-4">
+        <h2 class="font-weight-bold text-dark">Lecturer Dashboard</h2>
+        <p class="text-muted">Manage your upcoming events and view history.</p>
+    </div>
+
+    <div class="timeframe-wrapper">
+        <div class="timeframe-toggle shadow-sm">
+            <a href="{{ url_for('lecturer_view.dashboard', timeframe='upcoming', category=current_category, search=search_query, sort=current_sort) }}" 
+               class="toggle-btn {{ 'active' if current_timeframe == 'upcoming' else '' }}">
+                <i class="fas fa-calendar-check mr-2"></i> Upcoming
+            </a>
+            <a href="{{ url_for('lecturer_view.dashboard', timeframe='past', category=current_category, search=search_query, sort=current_sort) }}" 
+               class="toggle-btn {{ 'active' if current_timeframe == 'past' else '' }}">
+                <i class="fas fa-history mr-2"></i> Past Events
+            </a>
+        </div>
+    </div>
+
+    <form method="GET" action="{{ url_for('lecturer_view.dashboard') }}" class="filter-container">
+        <input type="hidden" name="timeframe" value="{{ current_timeframe }}">
+        
+        <div class="row align-items-center">
+            <div class="col-md-7">
+                <div class="category-nav">
+                    <a href="{{ url_for('lecturer_view.dashboard', category='', timeframe=current_timeframe, search=search_query, sort=current_sort) }}" 
+                       class="category-pill {{ 'active' if not current_category else '' }}">
+                       All
+                    </a>
+                    {% for cat in categories_nav %}
+                    <a href="{{ url_for('lecturer_view.dashboard', category=cat.category_id, timeframe=current_timeframe, search=search_query, sort=current_sort) }}" 
+                       class="category-pill {{ 'active' if current_category|int == cat.category_id else '' }}">
+                       {{ cat.category_name }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="col-md-5">
+                <div class="search-controls">
+                    <input type="text" name="search" class="custom-input form-control" 
+                           placeholder="Search events..." value="{{ search_query }}">
+                    
+                    <select name="sort" class="custom-select" style="max-width: 180px;" onchange="this.form.submit()">
+                        <option value="newest" {% if current_sort == 'newest' %}selected{% endif %}>Newest</option>
+                        <option value="oldest" {% if current_sort == 'oldest' %}selected{% endif %}>Oldest</option>
+                    </select>
+                    
+                    <button type="submit" class="btn-search">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if events.items|length == 0 %}
+        <div class="alert alert-light text-center py-5 shadow-sm rounded border">
+            <div class="mb-3 text-muted"><i class="far fa-folder-open fa-3x"></i></div>
+            <h4>No {{ current_timeframe }} events found.</h4>
+            <p class="text-muted">Try adjusting your filters.</p>
+        </div>
+    {% else %}
+        <div class="row">
+            {% for event in events.items %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100 event-card shadow-sm">
+                    <div class="event-card shadow-sm {{ 'expired-card' if current_timeframe == 'past' else '' }}">
+                    
+                        <div class="event-img-box">
+                            <img src="{{ url_for('static', filename='images/' ~ (event.event_img if event.event_img else 'default.jpg')) }}" 
+                                alt="{{ event.title }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            
+                            <div style="position: absolute; top: 15px; right: 15px;">
+                                    <span class="badge badge-secondary shadow">{{ event.event_status }}</span>
+                            </div>
+                        </div>
+
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title font-weight-bold mb-1 text-dark">{{ event.title }}</h5>
+                            <p class="mb-2 font-weight-bold text-primary small">
+                                <i class="fas fa-user-circle mr-1"></i> {{ event.lecturer_id or event.organizer_id }}
+                            </p>
+                            
+                            <div class="mt-2 mb-3">
+                                <p class="text-muted small mb-1">
+                                    <i class="far fa-calendar-alt mr-2 text-info"></i> {{ event.start_datetime.strftime('%d %b %Y, %I:%M %p') }}
+                                </p>
+                                
+                                <p class="text-muted small mb-0">
+                                    <i class="fas fa-map-marker-alt mr-2 text-danger"></i>
+                                    {% set ns = namespace(confirmed_venue=none) %}
+                                    {% for b in event.bookings %}
+                                        {% if b.status.status_name == 'Approved' %}
+                                            {% set ns.confirmed_venue = b.room.room_name %}
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {% if ns.confirmed_venue %}
+                                        <span class="text-dark font-weight-bold">{{ ns.confirmed_venue }}</span>
+                                    {% elif event.venue_location == 'Pending Approval' %}
+                                        <span class="text-warning font-weight-bold">Venue Pending</span>
+                                    {% else %}
+                                        {{ event.venue_location if event.venue_location else 'Venue TBD' }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                            
+                            <div class="mt-auto">
+                                <a href="{{ url_for('lecturer_view.view_event_details', event_id=event.event_id) }}" 
+                                class="btn btn-outline-primary btn-block rounded-pill font-weight-bold">
+                                    View Details
+                                </a>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <nav aria-label="Page navigation" class="mt-4 mb-5">
+            <ul class="pagination justify-content-center">
+                {% if events.has_prev %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('lecturer_view.dashboard', page=events.prev_num, timeframe=current_timeframe, category=current_category, search=search_query, sort=current_sort) }}">Previous</a>
+                </li>
+                {% endif %}
+                
+                {% for page_num in events.iter_pages() %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == events.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('lecturer_view.dashboard', page=page_num, timeframe=current_timeframe, category=current_category, search=search_query, sort=current_sort) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if events.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('lecturer_view.dashboard', page=events.next_num, timeframe=current_timeframe, category=current_category, search=search_query, sort=current_sort) }}">Next</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+{% endblock %}

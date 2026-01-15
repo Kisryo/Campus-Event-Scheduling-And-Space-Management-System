@@ -1,0 +1,126 @@
+{% extends 'lecturer/base_lecturer.html' %}
+    {% block title %}{{ event.title }} | Details{% endblock %}
+
+    {% block content %}
+    <div class="container mt-4 mb-5">
+        
+        <a href="{{ url_for('lecturer_view.dashboard') }}" class="btn btn-outline-secondary mb-3">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+
+        <div class="row">
+            <div class="col-md-5 mb-4">
+                <div class="card border-0 shadow-sm overflow-hidden rounded">
+                    {% if event.event_img %}
+                        <img src="{{ url_for('static', filename='images/' + event.event_img) }}" 
+                            alt="{{ event.title }}" class="img-fluid w-100" style="object-fit: cover; min-height: 400px;">
+                    {% else %}
+                        <div class="bg-light d-flex align-items-center justify-content-center text-muted" style="height: 400px;">
+                            <i class="fas fa-image fa-4x"></i>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-md-7">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-4">
+                        <div class="mb-2">
+                            {% if event.event_status == 'Approved' %}
+                                <span class="badge badge-success px-3 py-2">Upcoming</span>
+                            {% else %}
+                                <span class="badge badge-secondary px-3 py-2">{{ event.event_status }}</span>
+                            {% endif %}
+                        </div>
+
+                        <h1 class="font-weight-bold mb-3">{{ event.title }}</h1>
+                        
+                        <p class="text-primary font-weight-bold mb-4">
+                            <i class="fas fa-user-circle mr-1"></i> Organized by: {{ event.lecturer_id or event.organizer_id }}
+                        </p>
+
+                        <div class="row mb-4">
+                            <div class="col-6">
+                                <small class="text-muted font-weight-bold text-uppercase">Date & Time</small>
+                                <p class="font-weight-bold text-dark">
+                                    <i class="far fa-calendar-alt text-success mr-2"></i>
+                
+                                    {# --- SMART DATE LOGIC --- #}
+                                    {% if event.start_datetime.date() == event.end_datetime.date() %}
+                                        {{ event.start_datetime.strftime('%d %b %Y') }}<br>
+                    
+                                        <span class="text-muted ml-4">
+                                            {{ event.start_datetime.strftime('%I:%M %p') }} - {{ event.end_datetime.strftime('%I:%M %p') }}
+                                        </span>
+
+                                    {% else %}
+                                        {{ event.start_datetime.strftime('%d %b, %I:%M %p') }} <br>
+                    
+                                        <span class="text-muted ml-4">
+                                            to {{ event.end_datetime.strftime('%d %b, %I:%M %p') }}
+                                        </span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            
+                            <div class="col-6">
+                                <small class="text-muted font-weight-bold text-uppercase">Venue</small>
+                                <p class="font-weight-bold text-dark">
+                                    <i class="fas fa-map-marker-alt text-danger mr-1"></i> 
+                                    
+                                    {# --- SMART VENUE LOGIC --- #}
+                                    {# 1. Search for an Approved Booking attached to this event #}
+                                    {% set ns = namespace(confirmed_venue=none) %}
+                                    {% for b in event.bookings %}
+                                        {% if b.status.status_name == 'Approved' %}
+                                            {% set ns.confirmed_venue = b.room.room_name %}
+                                        {% endif %}
+                                    {% endfor %}
+
+                                    {# 2. Display Logic #}
+                                    {% if ns.confirmed_venue %}
+                                        {# Case A: Found an approved booking -> Show Room Name #}
+                                        {{ ns.confirmed_venue }}
+                                        
+                                    {% elif event.venue_location == 'Pending Approval' %}
+                                        {# Case B: Status is specifically 'Pending Approval' -> Show Badge #}
+                                        <span class="text-warning font-weight-bold">Pending Approval</span>
+                                        
+                                    {% else %}
+                                        {# Case C: Default text (TBA or whatever is saved) #}
+                                        {{ event.venue_location if event.venue_location else 'To Be Announced' }}
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <small class="text-muted font-weight-bold text-uppercase">Availability</small>
+                            <div class="progress mt-1" style="height: 10px;">
+                                {% set percent = ((event.capacity - spots_left) / event.capacity * 100) if event.capacity > 0 else 0 %}
+                                <div class="progress-bar bg-info" role="progressbar" style="width: {{ percent }}%"></div>
+                            </div>
+                            <p class="mt-1 small">
+                                <strong>{{ spots_left }}</strong> spots remaining out of {{ event.capacity }}
+                            </p>
+                        </div>
+
+                        <hr>
+                        
+                        <h5 class="font-weight-bold">About this Event</h5>
+                        <p class="text-muted" style="white-space: pre-line;">{{ event.description }}</p>
+
+                        {% if event.lecturer_id == current_user.lecturer_id %}
+                            <div class="mt-4 p-3 bg-light rounded border">
+                                <p class="mb-2 font-weight-bold"><i class="fas fa-cog"></i> You are the organizer of this event.</p>
+                                <a href="{{ url_for('lecturer_view.manage_event', event_id=event.event_id) }}" class="btn btn-primary btn-block">
+                                    Manage Event
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}

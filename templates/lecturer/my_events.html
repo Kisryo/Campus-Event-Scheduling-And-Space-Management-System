@@ -1,0 +1,83 @@
+{% extends 'lecturer/base_lecturer.html' %}
+{% block title %}My Workshops & Seminars{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="font-weight-bold mb-0">My Events</h2>
+            <p class="text-muted">Manage your workshops and seminars.</p>
+        </div>
+        <a href="{{ url_for('lecturer_view.create_event') }}" class="btn btn-success shadow-sm px-4">
+            <i class="fas fa-plus mr-2"></i> Create Workshop
+        </a>
+    </div>
+
+    {% if events.items|length == 0 %}
+        <div class="alert alert-light text-center py-5 border shadow-sm rounded">
+            <div class="mb-3"><i class="far fa-calendar-plus fa-3x text-muted"></i></div>
+            <h4>You haven't created any events yet.</h4>
+        </div>
+    {% else %}
+        <div class="row">
+            {% for event in events.items %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card h-100 shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <small class="text-muted font-weight-bold d-block">DATE</small>
+                                <span class="text-dark">{{ event.start_datetime.strftime('%d %b %Y') }}</span>
+                            </div>
+                            {% if event.end_datetime < now or event.event_status == 'Expired' %}
+                                <span class="badge badge-dark p-2">Completed</span>
+                            {% elif event.event_status == 'Upcoming' %}
+                                <span class="badge badge-success p-2">Published</span>
+                            {% elif event.event_status == 'Pending' %}
+                                <span class="badge badge-secondary p-2">Draft</span>
+                            {% endif %}
+                        </div>
+                        
+                        <h5 class="card-title font-weight-bold text-dark mb-2">{{ event.title }}</h5>
+                        <p class="card-text text-muted small text-truncate">{{ event.description }}</p>
+                        <hr>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-primary font-weight-bold"><i class="fas fa-users"></i> Cap: {{ event.capacity }}</small>
+                            
+                            {% if event.end_datetime < now or event.event_status == 'Expired' %}
+                                <a href="{{ url_for('lecturer_view.manage_event', event_id=event.event_id) }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">View History</a>
+                            {% elif event.event_status == 'Pending' %}
+                                <a href="{{ url_for('lecturer_view.manage_event', event_id=event.event_id) }}" class="btn btn-outline-primary btn-sm rounded-pill px-3">Manage</a>
+                            {% else %}
+                                <a href="{{ url_for('lecturer_view.manage_event', event_id=event.event_id) }}" class="btn btn-outline-info btn-sm rounded-pill px-3">View</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <nav aria-label="Page navigation" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if events.has_prev %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('lecturer_view.my_events', page=events.prev_num) }}">Previous</a></li>
+                {% endif %}
+                {% for page_num in events.iter_pages() %}
+                    {% if page_num %}
+                        <li class="page-item {% if page_num == events.page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('lecturer_view.my_events', page=page_num) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if events.has_next %}
+                <li class="page-item"><a class="page-link" href="{{ url_for('lecturer_view.my_events', page=events.next_num) }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+</div>
+{% endblock %}
