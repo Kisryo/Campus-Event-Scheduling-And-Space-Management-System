@@ -1,0 +1,248 @@
+{% extends 'admin/base_admin.html' %}
+{% block title %}Monitor Events Calendar{% endblock %}
+
+{% block head %}
+<link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<style>
+    /* --- 1. CALENDAR CONTAINER --- */
+#calendar {
+max-width: 100%;
+margin: 0 auto;
+background: #ffffff;
+padding: 32px;
+border-radius: 18px;
+min-height: 850px;
+font-family: 'Nunito', sans-serif;
+
+/* Modern soft shadow */
+box-shadow:
+0 12px 30px rgba(0, 0, 0, 0.06),
+0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+/* ==============================
+   HEADER TOOLBAR
+================================ */
+.fc-toolbar {
+    margin-bottom: 1.5rem !important;
+}
+
+.fc-toolbar-title {
+    font-size: 1.9rem !important;
+    font-weight: 800;
+    color: #4e73df;
+    letter-spacing: -0.6px;
+}
+
+/* Buttons */
+.fc-button {
+    border-radius: 10px !important;
+    font-weight: 600;
+    padding: 6px 18px !important;
+}
+
+.fc-button-primary {
+    background-color: #4e73df !important;
+    border-color: #4e73df !important;
+    box-shadow: 0 2px 6px rgba(78, 115, 223, 0.25);
+}
+
+.fc-button-primary:hover {
+    background-color: #2e59d9 !important;
+    box-shadow: 0 6px 14px rgba(78, 115, 223, 0.35);
+    transform: translateY(-1px);
+}
+
+.fc-button-active {
+    background-color: #224abe !important;
+    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15);
+}
+
+/* ==============================
+   DAY HEADERS (MON, TUE…)
+================================ */
+.fc-col-header-cell {
+    background: linear-gradient(180deg, #f8f9fc, #ffffff);
+    padding: 14px 0 !important;
+    border-bottom: 2px solid #e3e6f0 !important;
+}
+
+.fc-col-header-cell-cushion {
+    color: #858796;
+    font-size: 0.8rem;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    text-decoration: none !important;
+}
+
+/* ==============================
+   DAY GRID CELLS
+================================ */
+.fc-daygrid-day {
+    transition: background-color 0.2s ease;
+}
+
+.fc-daygrid-day:hover {
+    background-color: #f9fafc;
+}
+
+.fc-daygrid-day-number {
+    color: #5a5c69;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 6px 10px !important;
+    text-decoration: none !important;
+}
+
+/* ==============================
+   TODAY HIGHLIGHT
+================================ */
+.fc-day-today {
+    background-color: #eef4ff !important;
+}
+
+.fc-day-today .fc-daygrid-day-number {
+    background-color: #4e73df;
+    color: #ffffff;
+    border-radius: 999px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 4px;
+    font-size: 0.85rem;
+}
+
+/* ==============================
+   EVENT CARDS
+================================ */
+.fc-event {
+    border: none !important;
+    border-radius: 8px;
+    padding: 5px 8px;
+    margin-bottom: 5px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    background: linear-gradient(135deg, #4e73df, #6f8cf3);
+    color: #ffffff;
+
+    box-shadow:
+        0 2px 4px rgba(0,0,0,0.08),
+        0 1px 2px rgba(0,0,0,0.05);
+
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease,
+        filter 0.15s ease;
+}
+
+.fc-event:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    filter: brightness(0.95);
+}
+
+/* Time text */
+.fc-event-time {
+    font-weight: 800;
+    margin-right: 4px;
+    opacity: 0.95;
+}
+
+.fc-event-title {
+    font-weight: 600;
+}
+
+/* ==============================
+   MORE EVENTS LINK
+================================ */
+.fc-daygrid-more-link {
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: #4e73df;
+}
+
+/* ==============================
+   LEGEND / BADGES (Optional)
+================================ */
+.status-badge {
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 999px;
+}
+
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4 mb-5">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="font-weight-bold text-gray-800 mb-1">Monitor Event Schedule</h2>
+            <p class="text-muted small mb-0">Overview of all approved and upcoming campus activities.</p>
+        </div>
+    </div>
+
+    <div id='calendar'></div>
+
+</div>
+
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var calendarEl = document.getElementById('calendar');
+
+        var calendar = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'dayGridMonth',
+            themeSystem: 'bootstrap',
+            
+            // --- HEADER TOOLBAR ---
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'dayGridMonth,timeGridWeek,listWeek'
+            },
+            
+            // --- SETTINGS ---
+            height: 'auto',
+            navLinks: true, 
+            editable: false, 
+            dayMaxEvents: true,
+
+            // --- TIME FORMATTING (NEW) ---
+            // This forces the time to show as "8:56 AM"
+            eventTimeFormat: { 
+                hour: 'numeric',
+                minute: '2-digit',
+                meridiem: 'short'
+            },
+            
+            // --- DATA SOURCE ---
+            events: "{{ url_for('admin_view.get_calendar_events') }}",
+
+            // --- HOVER TOOLTIP ---
+            eventDidMount: function(info) {
+                var tooltip = "Venue: " + info.event.extendedProps.venue + 
+                              "\nStatus: " + info.event.extendedProps.status;
+                info.el.setAttribute('title', tooltip);
+            },
+
+            // --- CLICK ACTION ---
+            eventClick: function(info) {
+                info.jsEvent.preventDefault();
+                if (info.event.url) {
+                    window.location.href = info.event.url;
+                }
+            }
+        });
+
+        calendar.render();
+    });
+</script>
+{% endblock %}
