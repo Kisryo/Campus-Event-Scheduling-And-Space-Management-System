@@ -1,0 +1,100 @@
+{% extends 'student/base_student.html' %}
+{% block title %}My Event{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>My Event</h2>
+    <p class="text-muted">Manage your registrations and provide feedback.</p>
+
+    {% if registrations|length == 0 %}
+        <div class="alert alert-warning">You haven't registered for any events yet.</div>
+    {% else %}
+        <div class="table-responsive">
+            <table class="table table-hover bg-white shadow-sm mt-3">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Event</th>
+                        <th>Venue</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for reg in registrations %}
+                    <tr>
+                        <td class="align-middle">
+                            {{ reg.event.start_datetime.strftime('%d %b %Y') }}<br>
+                            <small class="text-muted">{{ reg.event.start_datetime.strftime('%I:%M %p') }}</small>
+                        </td>
+                        <td class="align-middle font-weight-bold">{{ reg.event.title }}</td>
+                        <td class="align-middle">{{ reg.event.venue_location }}</td>
+                        
+                        <td class="align-middle">
+                            {% if reg.event.start_datetime < now %}
+                                <span class="badge badge-secondary">Completed</span>
+                            {% else %}
+                                <span class="badge badge-success">Upcoming</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="align-middle">
+                            {% if reg.event.start_datetime > now %}
+                                <form action="{{ url_for('student_view.cancel_registration', event_id=reg.event.event_id) }}" method="POST" style="display:inline;">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Are you sure you want to cancel registration?');">
+                                        Cancel
+                                    </button>
+                                </form>
+
+                            {% elif reg.event.event_id not in feedback_event_ids %}
+                                <button type="button" class="btn btn-primary btn-sm" data-toggle="modal" data-target="#feedbackModal{{ reg.event.event_id }}">
+                                    Submit Feedback
+                                </button>
+
+                                <div class="modal fade" id="feedbackModal{{ reg.event.event_id }}" tabindex="-1">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title">Feedback: {{ reg.event.title }}</h5>
+                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                            </div>
+                                            <form action="{{ url_for('student_view.submit_feedback', event_id=reg.event.event_id) }}" method="POST">
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                                    <div class="form-group">
+                                                        <label>Rating (1-5)</label>
+                                                        <select name="rating" class="form-control" required>
+                                                            <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
+                                                            <option value="4">⭐⭐⭐⭐ (Good)</option>
+                                                            <option value="3">⭐⭐⭐ (Average)</option>
+                                                            <option value="2">⭐⭐ (Poor)</option>
+                                                            <option value="1">⭐ (Terrible)</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="form-group">
+                                                        <label>Comments</label>
+                                                        <textarea name="comments" class="form-control" rows="3" placeholder="Share your experience..."></textarea>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                                                    <button type="submit" class="btn btn-primary">Submit Feedback</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            
+                            {% else %}
+                                <span class="text-success small"><i class="fas fa-check"></i> Feedback Sent</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

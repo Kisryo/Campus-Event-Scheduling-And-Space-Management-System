@@ -1,0 +1,59 @@
+{% extends 'student/base_student.html' %}
+
+{% block title %}Clubs & Societies | MMUEvent{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+{% endblock %}
+
+{% block content %}
+
+<div class="main-content-wrapper">
+  
+  <div class="header-section">
+    <h1>Clubs & Societies</h1>
+    <p>Browse active clubs and view their upcoming events.</p>
+  </div>
+
+  {% if organizers|length == 0 %}
+      <div class="no-events-box">
+          <h2>No active clubs found.</h2>
+          <p>Check back later for updates!</p>
+      </div>
+  {% else %}
+      
+      <div class="event-grid-container">
+        {% for org in organizers %}
+        <div class="event-card shadow-sm" style="display: flex; flex-direction: column; justify-content: center;">
+            
+            <div class="event-details text-center" style="padding: 40px 20px;">
+                <h3 class="event-title mb-2" style="font-size: 1.5rem;">{{ org.organizer_name }}</h3>
+                
+                <p class="text-muted small mb-4" style="text-transform: uppercase; letter-spacing: 1px;">
+                    Campus Organizer
+                </p>
+
+                <div style="margin-bottom: 30px; font-size: 0.95rem; color: #555;">
+                    <p class="mb-2">
+                        <i class="fas fa-envelope text-primary mr-2"></i> {{ org.organizer_email }}
+                    </p>
+                    {% if org.organizer_phone %}
+                    <p class="mb-0">
+                        <i class="fas fa-phone text-primary mr-2"></i> {{ org.organizer_phone }}
+                    </p>
+                    {% endif %}
+                </div>
+                
+                <a href="{{ url_for('student_view.view_club_events', organizer_id=org.organizer_id) }}" class="view-details-btn">
+                    View Events
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+      </div>  
+
+  {% endif %}
+
+</div>
+
+{% endblock %}
