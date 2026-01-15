@@ -1,0 +1,325 @@
+{% extends 'organizer/base_organizer.html' %}
+{% block title %}Manage Event | {{ event.title }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="font-weight-bold mb-0">{{ event.title }}</h2>
+            <p class="text-muted mt-1">
+                <i class="fas fa-info-circle"></i> Status: 
+                {% if event.event_status == 'Upcoming' %}
+                    <span class="badge badge-success">Upcoming</span>
+                {% elif event.event_status == 'Pending' %}
+                    <span class="badge badge-secondary">Draft</span>
+                {% elif event.event_status == 'Expired' %}
+                    <span class="badge badge-dark">Completed</span>
+                {% else %}
+                    <span class="badge badge-danger">{{ event.event_status }}</span>
+                {% endif %}
+                
+                <span class="mx-2">|</span>
+                <i class="fas fa-map-marker-alt"></i> Location: 
+                <span class="text-primary font-weight-bold">
+                    {# PRIORITY 1: If there is an Active Approved Booking, show the Room Name #}
+                    {% if current_booking and current_booking.status.status_name == 'Approved' %}
+                        {{ current_booking.room.room_name }}
+        
+                    {# PRIORITY 2: If we have a location text saved (e.g. 'Pending Approval'), show it #}
+                    {% elif event.venue_location %}
+                        {{ event.venue_location }}
+            
+                    {# PRIORITY 3: Default #}
+                    {% else %}
+                        Not Booked
+                    {% endif %}
+                </span>
+            </p>
+        </div>
+        <a href="{{ url_for('organizer_view.my_events') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to My Events
+        </a>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    {% set is_editable = (event.event_status == 'Pending') %}
+
+    <ul class="nav nav-tabs mb-4" id="manageTabs" role="tablist">
+        <li class="nav-item"><a class="nav-link active" id="details-tab" data-toggle="tab" href="#details">Edit Details</a></li>
+        <li class="nav-item"><a class="nav-link" id="venue-tab" data-toggle="tab" href="#venue">Venue Booking</a></li>
+        <li class="nav-item"><a class="nav-link" id="equip-tab" data-toggle="tab" href="#equip">Request Equipment</a></li>
+        <li class="nav-item"><a class="nav-link" id="participants-tab" data-toggle="tab" href="#participants">Participants</a></li>
+    </ul>
+
+    <div class="tab-content bg-white p-4 shadow-sm rounded border">
+        
+        <div class="tab-pane fade show active" id="details" role="tabpanel">
+            {% if not is_editable %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-lock"></i> This event is published. Details are read-only.
+                </div>
+            {% endif %}
+
+            <form action="{{ url_for('organizer_view.edit_event', event_id=event.event_id) }}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
+                <div class="form-group">
+                    <label class="font-weight-bold">Event Title</label>
+                    <input type="text" name="title" class="form-control" value="{{ event.title }}" {{ 'disabled' if not is_editable }}>
+                </div>
+                
+                <div class="form-group">
+                    <label class="font-weight-bold">Description</label>
+                    <textarea name="description" class="form-control" rows="5" {{ 'disabled' if not is_editable }}>{{ event.description }}</textarea>
+                </div>
+                
+                <div class="form-row">
+                    <div class="col-md-6">
+                         <label class="font-weight-bold">Capacity</label>
+                         <input type="number" name="capacity" class="form-control" value="{{ event.capacity }}" {{ 'disabled' if not is_editable }}>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="font-weight-bold">Update Poster Image</label>
+                        <input type="file" name="event_img" class="form-control-file border p-1 rounded" {{ 'disabled' if not is_editable }}>
+                        {% if event.event_img %}
+                            <small class="text-muted d-block mt-1">Current: {{ event.event_img }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mt-3 text-muted small">
+                    <i class="far fa-calendar-alt"></i> Schedule: 
+                    {{ event.start_datetime.strftime('%d %b %Y, %I:%M %p') }} - 
+                    {{ event.end_datetime.strftime('%I:%M %p') }}
+                </div>
+
+                <hr>
+                
+                {% if is_editable %}
+                <div class="d-flex justify-content-between align-items-center">
+                    <button type="submit" name="action" value="save" class="btn btn-primary px-4">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
+
+                    <button type="submit" name="action" value="publish" class="btn btn-success px-4"
+                            onclick="return confirm('Are you sure you want to publish? It will be live immediately.');">
+                        <i class="fas fa-paper-plane"></i> Publish Event
+                    </button>
+                </div>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="tab-pane fade" id="venue" role="tabpanel">
+    
+            {% if current_booking %}
+        
+                <div class="alert alert-{{ 'success' if current_booking.status.status_name == 'Approved' else ('danger' if current_booking.status.status_name == 'Rejected' else 'info') }} border shadow-sm">
+                    <h5 class="alert-heading">
+                        {% if current_booking.status.status_name == 'Approved' %}
+                            <i class="fas fa-check-circle"></i> Venue Confirmed
+                        {% elif current_booking.status.status_name == 'Rejected' %}
+                            <i class="fas fa-times-circle"></i> Request Rejected
+                        {% else %}
+                            <i class="fas fa-clock"></i> Venue Request Pending
+                        {% endif %}
+                    </h5>
+                    <hr>
+                    <p class="mb-1"><strong>Requested Venue:</strong> {{ current_booking.room.room_name }}</p>
+                    <p class="mb-1"><strong>Status:</strong> 
+                        <span class="badge badge-{{ 'success' if current_booking.status.status_name == 'Approved' else ('danger' if current_booking.status.status_name == 'Rejected' else 'warning') }}">
+                            {{ current_booking.status.status_name }}
+                        </span>
+                    </p>
+                    {% if current_booking.status.status_name == 'Rejected' %}
+                        <p class="mt-2 text-danger small"><strong>Note:</strong> Your previous request was rejected. Please select a different room below.</p>
+                    {% endif %}
+                </div>
+
+            {% endif %}
+
+            {% if not current_booking or current_booking.status.status_name == 'Rejected' %}
+                
+                {% if is_editable or event.event_status == 'Upcoming' %}
+                <div class="row mt-4">
+                    <div class="col-md-8">
+                        <div class="card shadow-sm">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0 font-weight-bold text-dark">Request a Venue</h6>
+                            </div>
+                            <div class="card-body">
+                                <form action="{{ url_for('organizer_view.book_venue', event_id=event.event_id) }}" method="POST">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                    
+                                    <div class="form-group">
+                                        <label class="font-weight-bold text-muted">Select Available Room</label>
+                                        <select name="room_id" class="form-control custom-select">
+                                            {% for room in rooms %}
+                                                <option value="{{ room.room_id }}">{{ room.room_name }} (Cap: {{ room.capacity }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane mr-1"></i> Submit Booking Request
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                    <p class="text-muted mt-3">Venue booking is closed for completed events.</p>
+                {% endif %}
+
+            {% endif %}
+        </div>
+
+        <div class="tab-pane fade" id="equip" role="tabpanel">
+            <div class="row">
+                <div class="col-md-5 border-right">
+                    <h5 class="mb-3">Request New Item</h5>
+                    
+                    {% if is_editable or event.event_status == 'Upcoming' %}
+                    <form action="{{ url_for('organizer_view.request_equipment', event_id=event.event_id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        
+                        <div class="form-group">
+                            <label>Item Name (Stock Available)</label>
+                            <select name="equipment_id" class="form-control" id="equipSelect" onchange="updateMaxQuantity()">
+                                {% for eq in equipments %}
+                                    <option value="{{ eq.equipment_id }}" data-stock="{{ eq.total_stock }}">
+                                        {{ eq.item_name }} (Stock: {{ eq.total_stock }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="number" name="quantity" class="form-control" id="qtyInput" value="1" min="1" required>
+                            <small class="text-muted font-weight-bold" id="maxStockHelp"></small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-warning text-dark font-weight-bold" onclick="return confirm('Are you sure you want to add request?');">Add Request</button>
+                    </form>
+                    {% else %}
+                        <p class="text-muted">Equipment requests are closed.Request failed.Please try again.</p>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-7">
+                    <h5 class="mb-3">Requested Items</h5>
+                    <ul class="list-group">
+                        {% for req in current_equipment_reqs %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span class="font-weight-bold">{{ req.equipment.item_name }}</span> 
+                                <span class="text-muted">(x{{ req.quantity }})</span>
+                            </div>
+                            <span class="badge badge-{{ 'success' if req.status.status_name == 'Approved' else 'secondary' }}">
+                                {{ req.status.status_name }}
+                            </span>
+                        </li>
+                        {% else %}
+                            <li class="list-group-item text-muted">No equipment requested.</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-pane fade" id="participants" role="tabpanel">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Registered Students <span class="badge badge-primary ml-2">{{ participants|length }}</span></h5>
+                <button class="btn btn-sm btn-outline-dark" onclick="window.print()"><i class="fas fa-print"></i> Print</button>
+            </div>
+            
+            <form method="GET" action="{{ url_for('organizer_view.manage_event', event_id=event.event_id) }}" class="form-row mb-4 p-3 bg-light rounded align-items-end border">
+                <div class="col-md-9">
+                    <label class="small font-weight-bold">Search Name</label>
+                    <input type="text" name="search_q" class="form-control" placeholder="Search by student name..." value="{{ search_q }}">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-info btn-block">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </form>
+            
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="thead-light">
+                        <tr><th>No.</th><th>Name</th><th>ID</th><th>Email</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for p in participants %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ p.student.student_name }}</td>
+                            <td>{{ p.student_id }}</td>
+                            <td>{{ p.student.student_email }}</td>
+                            <td><span class="badge badge-{{ 'success' if p.status == 'Confirmed' else 'secondary' }}">{{ p.status }}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="text-center text-muted">No participants found.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // 1. Tab Persistence
+    document.addEventListener("DOMContentLoaded", function() {
+        if (new URLSearchParams(window.location.search).has('search_q')) {
+            $('#manageTabs a[href="#participants"]').tab('show');
+        } else {
+            var activeTab = localStorage.getItem('activeTabManageEvent');
+            if(activeTab) $('#manageTabs a[href="' + activeTab + '"]').tab('show');
+        }
+        $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+            localStorage.setItem('activeTabManageEvent', $(e.target).attr('href'));
+        });
+
+        // 2. Initialize Stock Limit Check
+        updateMaxQuantity();
+    });
+
+    // 3. Dynamic Stock Limit Function
+    function updateMaxQuantity() {
+        var select = document.getElementById("equipSelect");
+        var qtyInput = document.getElementById("qtyInput");
+        var helpText = document.getElementById("maxStockHelp");
+        
+        if (!select || !qtyInput) return; // Guard clause if elements missing (e.g. read-only mode)
+
+        // Get selected option data
+        var selectedOption = select.options[select.selectedIndex];
+        var maxStock = selectedOption.getAttribute("data-stock");
+        
+        // Update Input
+        qtyInput.max = maxStock;
+        helpText.innerText = "Max available: " + maxStock;
+        
+        // Auto-correct if value is too high
+        if(parseInt(qtyInput.value) > parseInt(maxStock)){
+            qtyInput.value = maxStock;
+        }
+    }
+</script>
+{% endblock %}

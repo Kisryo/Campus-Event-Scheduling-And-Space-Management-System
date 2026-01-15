@@ -1,0 +1,85 @@
+{% extends 'organizer/base_organizer.html' %} 
+
+{% block title %}Create Event{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/eventform.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="event-form-container" style="max-width: 800px; margin: 0 auto;">
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form class="event-form bg-white p-5 rounded shadow-sm" method="POST" action="{{ url_for('organizer_view.create_event') }}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="mb-0">Create New Event</h1>
+            <span class="badge badge-secondary p-2">New</span>
+        </div>
+        
+        <div class="form-row mb-4">
+            <div class="col-md-6">
+                <label class="font-weight-bold">Event Title <span class="text-danger">*</span></label> 
+                <input type="text" name="title" class="form-control" placeholder="Enter event name" required>
+            </div>
+            <div class="col-md-6">
+                <label class="font-weight-bold">Event Category <span class="text-danger">*</span></label>
+                <select name="category_id" class="form-control" required>
+                    <option value="" disabled selected>Select a Category</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.category_id }}">{{ cat.category_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row mb-4">
+            <div class="col-md-6">
+                <label class="font-weight-bold">Start Date & Time <span class="text-danger">*</span></label>
+                <input type="datetime-local" name="start_datetime" class="form-control" required>
+            </div>
+            <div class="col-md-6">
+                <label class="font-weight-bold">End Date & Time <span class="text-danger">*</span></label>
+                <input type="datetime-local" name="end_datetime" class="form-control" required>
+            </div>
+        </div>
+
+        <div class="form-row mb-4">
+            <div class="col-md-6">
+                <label class="font-weight-bold">Maximum Capacity <span class="text-danger">*</span></label>
+                <input type="number" name="capacity" class="form-control" placeholder="e.g. 100" min="1" required>
+            </div>
+            <div class="col-md-6">
+                 <label class="font-weight-bold">Event Poster</label>
+                 <input type="file" name="event_img" class="form-control-file border p-1 rounded">
+            </div>
+        </div>
+
+        <div class="form-group mb-4">
+            <label class="font-weight-bold">Description</label>
+            <textarea name="description" class="form-control" rows="5" placeholder="Describe your event details..."></textarea>
+        </div>
+        
+        <div class="alert alert-success small">
+            <i class="fas fa-info-circle"></i> <strong>Note:</strong> 
+            "Published" events will be immediately visible to students on the dashboard.
+        </div>
+
+        <hr>
+
+        <div class="d-flex justify-content-between">
+            <button type="submit" name="action" value="save" class="btn btn-outline-secondary">Save Draft</button>
+            <button type="submit" name="action" value="publish" class="btn btn-primary" onclick="return confirm('Publish now?');">Publish</button>
+        </div>
+        
+    </form>
+</div>
+{% endblock %}
