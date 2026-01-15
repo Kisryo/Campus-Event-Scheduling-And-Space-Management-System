@@ -12,7 +12,6 @@ class RequestStatus(db.Model):
     status_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     status_name = db.Column(db.String(20), nullable=False)
 
-    # Relationships (Optional: to see items with this status)
     bookings = db.relationship('Booking', backref='status', lazy=True)
     equipment_requests = db.relationship('Equipment_request', backref='status', lazy=True)
 
@@ -27,10 +26,8 @@ class Admin(db.Model, UserMixin):
     admin_email = db.Column(db.String(100), unique=True, nullable=False)
     admin_password = db.Column(db.String(255), nullable=False)
     admin_phone = db.Column(db.String(20))
-    admin_img = db.Column(db.String(255), nullable=True)
     admin_account_status = db.Column(db.String(20), default='Active')
 
-    # Relationships
     categories_created = db.relationship('Category', backref='created_by', lazy=True)
     bookings_approved = db.relationship('Booking', backref='approver', lazy=True)
     equipment_approved = db.relationship('Equipment_request', backref='approver', lazy=True)
@@ -47,10 +44,8 @@ class Organizer(db.Model, UserMixin):
     organizer_email = db.Column(db.String(100), unique=True, nullable=False)
     organizer_password = db.Column(db.String(255), nullable=False)
     organizer_phone = db.Column(db.String(20))
-    organizer_img = db.Column(db.String(255), nullable=True)
     organizer_account_status = db.Column(db.String(20), default='Active')
 
-    # Relationships
     events = db.relationship('Event', backref='organizer', lazy=True)
     bookings = db.relationship('Booking', backref='organizer_requester', lazy=True)
 
@@ -65,10 +60,8 @@ class Lecturer(db.Model, UserMixin):
     lecturer_email = db.Column(db.String(100), unique=True, nullable=False)
     lecturer_password = db.Column(db.String(255), nullable=False)
     lecturer_phone = db.Column(db.String(20))
-    lecturer_img = db.Column(db.String(255), nullable=True)
     lecturer_account_status = db.Column(db.String(20), default='Active')
 
-    # Relationships
     events = db.relationship('Event', backref='lecturer', lazy=True)
     bookings = db.relationship('Booking', backref='lecturer_requester', lazy=True)
 
@@ -85,7 +78,6 @@ class Student(db.Model, UserMixin):
     student_phone = db.Column(db.String(20))
     student_account_status = db.Column(db.String(20), default='Active')
 
-    # Relationships
     registrations = db.relationship('Registration', backref='student', lazy=True)
     feedbacks = db.relationship('Feedback', backref='student', lazy=True)
 
@@ -105,7 +97,6 @@ class Rooms(db.Model):
     room_type = db.Column(db.String(50))
     is_active = db.Column(db.Boolean, default=True)
 
-    # Relationships
     bookings = db.relationship('Booking', backref='room', lazy=True)
 
 
@@ -115,7 +106,6 @@ class Equipments(db.Model):
     item_name = db.Column(db.String(100), nullable=False)
     total_stock = db.Column(db.Integer, default=0)
 
-    # Relationships
     requests = db.relationship('Equipment_request', backref='equipment', lazy=True)
 
 
@@ -134,10 +124,11 @@ class Event(db.Model):
     event_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
+    event_img = db.Column(db.String(255), nullable=True) 
     start_datetime = db.Column(db.DateTime)
     end_datetime = db.Column(db.DateTime)
     event_status = db.Column(db.String(20))
-    venue_location = db.Column(db.String(100)) # Simple text, or link to Rooms if preferred
+    venue_location = db.Column(db.String(100))
     capacity = db.Column(db.Integer)
     
     # Foreign Keys
@@ -160,16 +151,13 @@ class Booking(db.Model):
     req_start_datetime = db.Column(db.DateTime)
     req_end_datetime = db.Column(db.DateTime)
     
-    # Foreign Keys
     status_id = db.Column(db.Integer, db.ForeignKey('RequestStatus.status_id'), default=1)
     room_id = db.Column(db.Integer, db.ForeignKey('Rooms.room_id'))
     event_id = db.Column(db.Integer, db.ForeignKey('Event.event_id'))
     
-    # Requestors (Nullable because only one makes the request)
     req_organizer_id = db.Column(db.String(20), db.ForeignKey('Organizer.organizer_id'), nullable=True)
     req_lecturer_id = db.Column(db.String(20), db.ForeignKey('Lecturer.lecturer_id'), nullable=True)
     
-    # Approver
     approved_by_admin_id = db.Column(db.String(20), db.ForeignKey('Admin.admin_id'), nullable=True)
 
 
@@ -178,7 +166,6 @@ class Equipment_request(db.Model):
     request_id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     quantity = db.Column(db.Integer)
     
-    # Foreign Keys
     status_id = db.Column(db.Integer, db.ForeignKey('RequestStatus.status_id'), default=1)
     event_id = db.Column(db.Integer, db.ForeignKey('Event.event_id'))
     equipment_id = db.Column(db.Integer, db.ForeignKey('Equipments.equipment_id'))
