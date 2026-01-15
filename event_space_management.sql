@@ -4,7 +4,7 @@ CREATE TABLE RequestStatus (
 );
 
 INSERT INTO RequestStatus (status_id, status_name) VALUES 
-(1, 'Pending'), (2, 'Approved'), (3, 'Rejected'), (4, 'Cancelled');
+(1, 'Pending'), (2, 'Approved'), (3, 'Rejected');
 
 CREATE TABLE Admin (
     admin_id VARCHAR(20) PRIMARY KEY,  
@@ -12,7 +12,6 @@ CREATE TABLE Admin (
     admin_email VARCHAR(100) UNIQUE NOT NULL,
     admin_password VARCHAR(255) NOT NULL,
     admin_phone VARCHAR(20),
-    admin_img VARCHAR(255) DEFAULT NULL,
     admin_account_status VARCHAR(20) DEFAULT 'Active'
 );
 
@@ -22,7 +21,6 @@ CREATE TABLE Organizer (
     organizer_email VARCHAR(100) UNIQUE NOT NULL,
     organizer_password VARCHAR(255) NOT NULL,
     organizer_phone VARCHAR(20),
-    organizer_img VARCHAR(255) DEFAULT NULL,
     organizer_account_status VARCHAR(20) DEFAULT 'Active'
 );
 
@@ -32,7 +30,6 @@ CREATE TABLE Lecturer (
     lecturer_email VARCHAR(100) UNIQUE NOT NULL,
     lecturer_password VARCHAR(255) NOT NULL,
     lecturer_phone VARCHAR(20),
-    lecturer_img VARCHAR(255) DEFAULT NULL,
     lecturer_account_status VARCHAR(20) DEFAULT 'Active'
 );
 
@@ -71,6 +68,7 @@ CREATE TABLE Event (
     event_id INT PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(200) NOT NULL,
     description TEXT,
+    event-img VARCHAR(255) NULL,
     start_datetime DATETIME,
     end_datetime DATETIME,
     event_status VARCHAR(20),
