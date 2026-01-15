@@ -4,9 +4,8 @@ from wtforms import (
     SelectField, PasswordField, SubmitField
 )
 from wtforms.validators import (
-    DataRequired, ValidationError, EqualTo, Length
+    DataRequired, ValidationError,Email, EqualTo, Length
 )
-from flask_wtf.file import FileField, FileAllowed
 from models import Student, Lecturer, Organizer, Admin
 
 # ========================================================
@@ -30,8 +29,8 @@ class SignupForm(FlaskForm):
     )
     user_phone = StringField(
         'Phone number',
-        validators=[DataRequired(), Length(min=10, max=11)],
-        render_kw={"placeholder": "Phone Number (without -)"}
+        validators=[DataRequired(), Length(min=10, max=13)],
+        render_kw={"placeholder": "Phone Number (with -)"}
     )
     user_pwd = PasswordField(
         'Password',
@@ -96,63 +95,27 @@ class ResetPasswordForm(FlaskForm):
 
 
 # ========================================================
-# 3. EVENT CREATION FORM (For Organizers)
+# 3. FORGOT PASSWORD FORM (Request Reset Link)
 # ========================================================
-class EventForm(FlaskForm):
-    event_name = StringField(
-        'Event Title',
-        validators=[DataRequired()],
-        render_kw={"placeholder": "Event Title"}
+class ForgotPasswordForm(FlaskForm):
+    email = StringField(
+        'Email Address',
+        validators=[DataRequired(), Email()],
+        render_kw={"placeholder": "Enter your registered email"}
     )
-    
-    # Dropdown for Categories (Populated in View)
-    event_cat = SelectField(
-        'Category',
-        choices=[], 
-        coerce=int,
-        validators=[DataRequired()]
-    )
-    
-    # Combined Date & Time into one field
-    event_start = DateTimeLocalField(
-        'Start Date & Time', 
-        validators=[DataRequired()],
-        format='%Y-%m-%dT%H:%M'
-    )
-    
-    event_end = DateTimeLocalField(
-        'End Date & Time', 
-        validators=[DataRequired()],
-        format='%Y-%m-%dT%H:%M'
-    )
-    
-    event_img = FileField(
-        'Event Poster',
-        validators=[FileAllowed(['jpg', 'jpeg', 'png'], 'Images only (jpg, png)')]
-    )
-    
-    event_descr = TextAreaField(
-        'Description',
-        validators=[DataRequired()],
-        render_kw={"placeholder": "Event details..."}
-    )
-    
-    # Dropdown for Rooms (Populated in View)
-    event_venue = SelectField(
-        'Venue / Room',
-        choices=[],
-        coerce=int,
-        validators=[DataRequired()]
-    )
-    
-    location_detail = StringField(
-        'Location Details',
-        validators=[DataRequired()],
-        render_kw={"placeholder": "Specific details (e.g. Building A, Zoom Link)"}
-    )
-    
-    submit = SubmitField('Save Event')
+    submit = SubmitField('Send Reset Link')
 
-    def validate_event_end(self, field):
-        if field.data < self.event_start.data:
-            raise ValidationError('End date cannot be earlier than start date.')
+# ========================================================
+# 4. SET NEW PASSWORD
+# ========================================================
+class SetNewPasswordForm(FlaskForm):
+    new_pwd = PasswordField(
+        'New Password', 
+        validators=[DataRequired()],
+        render_kw={"placeholder": "Enter New Password"}
+    )
+    confirm_new_pwd = PasswordField(
+        'Confirm New Password', 
+        validators=[DataRequired(), EqualTo('new_pwd', message='Passwords must match.')],
+        render_kw={"placeholder": "Confirm New Password"}
+    )
