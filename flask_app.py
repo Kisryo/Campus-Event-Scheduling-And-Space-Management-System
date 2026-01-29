@@ -30,6 +30,7 @@ csrf = CSRFProtect(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'auth.login'
 
+
 # ========================================================
 #  USER LOADER (Checks all 4 Tables)
 # ========================================================
@@ -60,7 +61,7 @@ from auth import auth
 from admin_view import admin_view
 from organizer_view import organizer_view
 from lecturer_view import lecturer_view
-from user_view import user_view 
+from student_view import user_view 
 
 app.register_blueprint(auth, url_prefix='/')
 
