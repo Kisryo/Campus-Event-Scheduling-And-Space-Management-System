@@ -17,17 +17,23 @@ def home():
     current_dt = datetime.now()
     categories = Category.query.all()
 
-    # Query ALL upcoming events (Removed .limit(6))
-    all_upcoming = Event.query.filter(
+    # --- QUERY 1: UPCOMING (Soonest Date First) ---
+    upcoming_events = Event.query.filter(
         Event.start_datetime >= current_dt,
-        Event.event_status == 'Upcoming' 
-    ).order_by(Event.start_datetime.asc()).all()
+        Event.event_status == 'Upcoming'
+    ).order_by(Event.start_datetime.asc()).limit(3).all()
 
-    # Pass as 'events'
+    # --- QUERY 2: NEW ARRIVALS (Highest ID First) ---
+    new_events = Event.query.filter(
+        Event.start_datetime >= current_dt,
+        Event.event_status == 'Upcoming'
+    ).order_by(Event.event_id.desc()).limit(3).all()
+
     return render_template('student/home.html', 
                            user=current_user, 
                            categories_nav=categories, 
-                           events=all_upcoming)
+                           upcoming_events=upcoming_events,
+                           new_events=new_events)
 
 
 # ========================================================
@@ -90,7 +96,7 @@ def events():
             query = query.order_by(Event.start_datetime.asc())
 
     page = request.args.get('page', 1, type=int)
-    events_paginated = query.paginate(page=page, per_page=9)
+    events_paginated = query.paginate(page=page, per_page=6)
 
     return render_template('student/events.html', 
                            user=current_user,
@@ -154,7 +160,7 @@ def register_event(event_id):
     # 2. Check Capacity
     count = Registration.query.filter_by(event_id=event_id, status='Confirmed').count()
     if count >= event.capacity:
-        flash('Registration closed.No available slots', 'danger')
+        flash('Registration closed.Event Fully Booked', 'danger')
         return redirect(url_for('student_view.event_details', event_id=event_id))
 
     # 3. Create Registration
@@ -228,18 +234,7 @@ def submit_feedback(event_id):
     if not isinstance(current_user, Student):
         return redirect(url_for('student_view.home'))
 
-    # 1. Validation
-    reg = Registration.query.filter_by(student_id=current_user.student_id, event_id=event_id).first()
-    if not reg:
-        flash('You must attend the event to give feedback.', 'danger')
-        return redirect(url_for('student_view.my_registrations'))
-
-    existing = Feedback.query.filter_by(student_id=current_user.student_id, event_id=event_id).first()
-    if existing:
-        flash('Feedback already provided.', 'warning')
-        return redirect(url_for('student_view.my_registrations'))
-
-    # 2. Save
+    # 1. Save
     rating = request.form.get('rating')
     comments = request.form.get('comments')
 
@@ -266,10 +261,18 @@ def organizers():
     # ALLOW: Student, Organizer, OR Lecturer
     if not isinstance(current_user, (Student, Organizer, Lecturer)):
         return redirect(url_for('auth.login'))
+    
+    # 1. Get current page number (defaults to 1)
+    page = request.args.get('page', 1, type=int)
         
-    all_organizers = Organizer.query.filter_by(organizer_account_status='Active').all()
-    return render_template('student/organizers_list.html', organizers=all_organizers)
+    # 2. Base Query (Active Organizers only)
+    query = Organizer.query.filter_by(organizer_account_status='Active')
 
+    # 3. Apply Pagination (6 items per page)
+    # error_out=False prevents 404 errors if the page number is out of range
+    organizers_paginated = query.paginate(page=page, per_page=6, error_out=False)
+
+    return render_template('student/organizers_list.html', organizers=organizers_paginated)
 
 # ========================================================
 # 9. VIEW SPECIFIC ORGANIZER'S EVENTS (Dedicated Page)
@@ -314,18 +317,16 @@ def announcements():
                            user=current_user, 
                            announcements=all_announcements)
 
+@student_view.context_processor
+def inject_announcement_ids():
+    if current_user.is_authenticated:
+        # Fetch the ALL announcement IDs to check for notifications
+        recent_anns = Announcements.query.filter(
+            Announcements.target_audience.in_(['All', 'Student'])
+        ).order_by(Announcements.sent_at.desc()).all()
+        
+        # Pass the list of IDs to all templates
+        return dict(recent_announcement_ids=[a.announcement_id for a in recent_anns])
+    
+    return dict(recent_announcement_ids=[])
 
-# ========================================================
-# 11. STUDENT PROFILE
-# ========================================================
-@student_view.route('/profile', methods=['GET', 'POST'])
-@login_required
-def profile():
-    # Use the profile code I gave you earlier (ResetPasswordForm logic)
-    # If user is Organizer/Lecturer, redirect them to their own profile pages?
-    # For now, let's assume this is student profile only.
-    if not isinstance(current_user, Student):
-         return redirect(url_for('student_view.home'))
-         
-    # ... include the profile logic from previous answer here ...
-    return render_template('profile.html', user=current_user)
