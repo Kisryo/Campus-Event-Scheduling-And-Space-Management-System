@@ -94,7 +94,7 @@ def dashboard():
     # ---------------------------------------------------------
     # 4. PAGINATION & RENDER
     # ---------------------------------------------------------
-    events_paginated = query.paginate(page=page, per_page=9, error_out=False)
+    events_paginated = query.paginate(page=page, per_page=6, error_out=False)
 
     return render_template('lecturer/dashboard.html', 
                            user=current_user,
@@ -118,7 +118,7 @@ def my_events():
     # Filter by lecturer_id
     my_events_paginated = Event.query.filter_by(lecturer_id=current_user.lecturer_id)\
         .order_by(Event.start_datetime.desc())\
-        .paginate(page=page, per_page=9, error_out=False)
+        .paginate(page=page, per_page=6, error_out=False)
     
     return render_template('lecturer/my_events.html', 
                            events=my_events_paginated, 
@@ -258,24 +258,45 @@ def edit_event(event_id):
         flash('Cannot edit a published event.', 'danger')
         return redirect(url_for('lecturer_view.manage_event', event_id=event_id))
     
-    # INPUT VALIDATION 
+    # 1. CAPTURE INPUTS
     title = request.form.get('title')
     description = request.form.get('description')
     capacity = request.form.get('capacity')
+    start_str = request.form.get('start_datetime') # New Field
+    end_str = request.form.get('end_datetime')     # New Field
 
+    # 2. VALIDATION
     # A. Check for missing fields
-    if not title or not description or not capacity:
-        flash('Error: Title, Description, and Capacity are required.', 'warning')
+    if not title or not description or not capacity or not start_str or not end_str:
+        flash('Error: All fields (including dates) are required.', 'warning')
         return redirect(url_for('lecturer_view.manage_event', event_id=event_id))
 
-    # B. Check for invalid capacity (must be a positive number)
+    # B. Check for invalid capacity
     if not capacity.isdigit() or int(capacity) <= 0:
         flash('Error: Capacity must be a valid positive number.', 'warning')
         return redirect(url_for('lecturer_view.manage_event', event_id=event_id))
 
-    event.title = request.form.get('title')
-    event.description = request.form.get('description')
-    event.capacity = request.form.get('capacity')
+    # C. Process Dates
+    try:
+        # HTML5 datetime-local returns string format: 'YYYY-MM-DDTHH:MM'
+        new_start = datetime.strptime(start_str, '%Y-%m-%dT%H:%M')
+        new_end = datetime.strptime(end_str, '%Y-%m-%dT%H:%M')
+
+        # Logic Check: End cannot be before Start
+        if new_end <= new_start:
+            flash('Error: End time must be after the start time.', 'danger')
+            return redirect(url_for('lecturer_view.manage_event', event_id=event_id))
+            
+    except ValueError:
+        flash('Error: Invalid date format provided.', 'danger')
+        return redirect(url_for('lecturer_view.manage_event', event_id=event_id))
+
+    # 3. UPDATE DATABASE OBJECT
+    event.title = title
+    event.description = description
+    event.capacity = capacity
+    event.start_datetime = new_start # Update Start
+    event.end_datetime = new_end     # Update End
     
     image_file = request.files.get('event_img')
     if image_file:
@@ -283,6 +304,7 @@ def edit_event(event_id):
         if new_filename:
             event.event_img = new_filename
 
+    # 4. HANDLE ACTIONS
     action = request.form.get('action')
     if action == 'publish':
         event.event_status = 'Upcoming'
@@ -301,22 +323,29 @@ def edit_event(event_id):
 @login_required
 def book_venue(event_id):
     event = Event.query.get_or_404(event_id)
-    room_id = request.form.get('room_id')
+    
+    # Convert room_id to Integer immediately
+    try:
+        room_id = int(request.form.get('room_id'))
+    except (ValueError, TypeError):
+        flash('Invalid room selected.', 'danger')
+        return redirect(url_for('lecturer_view.manage_event', event_id=event_id))
 
-    # 1. Check for Conflicts
-    # Ensure we exclude 'Rejected' (id=3) or 'Cancelled' (id=4) bookings from the conflict check
+    # Robust Conflict Check
+    # We check for ANY overlap in time for the SAME room
+    # Logic: (StartA < EndB) and (EndA > StartB)
     overlap = Booking.query.filter(
         Booking.room_id == room_id, 
-        Booking.status_id.notin_([3, 4]),
+        Booking.status_id.notin_([3]), # Ignore Rejected(3)
         Booking.req_start_datetime < event.end_datetime, 
         Booking.req_end_datetime > event.start_datetime
     ).first()
 
     if overlap:
-        flash('Booking Conflict: This room is already booked for that time.', 'danger')
+        flash(f'Booking Conflict: This room is already taken during {overlap.req_start_datetime} - {overlap.req_end_datetime}.', 'danger')
         return redirect(url_for('lecturer_view.manage_event', event_id=event_id))
 
-    # 2. Create New Booking Request
+    # 4. Create New Booking Request
     new_booking = Booking(
         booking_date=datetime.now(), 
         req_start_datetime=event.start_datetime, 
@@ -327,7 +356,6 @@ def book_venue(event_id):
         req_lecturer_id=current_user.lecturer_id
     )
 
-    # 3. SET LOCATION TO PENDING (Do not set the actual room name yet)
     event.venue_location = "Pending Approval"
 
     db.session.add(new_booking)
@@ -345,12 +373,6 @@ def book_venue(event_id):
 def request_equipment(event_id):
     equipment_id = request.form.get('equipment_id')
     quantity = int(request.form.get('quantity'))
-    
-    item = Equipments.query.get_or_404(equipment_id)
-    
-    if quantity > item.total_stock:
-        flash(f'Error: Only {item.total_stock} units available.', 'danger')
-        return redirect(url_for('lecturer_view.manage_event', event_id=event_id))
     
     new_req = Equipment_request(
         quantity=quantity, 
@@ -469,3 +491,15 @@ def announcements():
     return render_template('lecturer/announcements.html', 
                            user=current_user, 
                            announcements=all_announcements)
+
+@lecturer_view.context_processor
+def inject_announcement_ids():
+    if current_user.is_authenticated:
+        # Fetch ALL relevant announcements for Lecturers
+        recent_anns = Announcements.query.filter(
+            Announcements.target_audience.in_(['All', 'Lecturer'])
+        ).order_by(Announcements.sent_at.desc()).all()
+        
+        return dict(recent_announcement_ids=[a.announcement_id for a in recent_anns])
+    
+    return dict(recent_announcement_ids=[])
