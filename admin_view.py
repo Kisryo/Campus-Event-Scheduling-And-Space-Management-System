@@ -3,6 +3,8 @@ from flask_login import login_required, current_user
 from flask import jsonify
 from models import db, Admin, Event, Booking, Category, Rooms, Announcements, Student, Organizer, Lecturer, Equipment_request, Registration
 from datetime import datetime
+from sqlalchemy import func, extract
+import json
 
 admin_view = Blueprint('admin_view', __name__)
 
@@ -16,7 +18,7 @@ def admin_home():
     if not isinstance(current_user, Admin):
         return redirect(url_for('auth.login'))
 
-    # Update Profile Logic
+    # Update Profile
     if request.method == 'POST':
         current_user.admin_name = request.form['name']
         current_user.admin_phone = request.form['phonenumber']
@@ -24,23 +26,39 @@ def admin_home():
         flash('Profile updated.', 'success')
         return redirect(url_for('admin_view.admin_home'))
 
-    # --- UPDATED STATISTICS LOGIC ---
-   # 1. Count Pending Venue Bookings
-    venue_count = Booking.query.filter_by(status_id=1).count()
-    
-    # 2. Count Pending Equipment Requests
-    equipment_count = Equipment_request.query.filter_by(status_id=1).count()
-    
-    # 3. Calculate Total
-    total_pending = venue_count + equipment_count
+    # Statistics
+    # 1. VENUE BOOKINGS (Breakdown)
+    # IDs: 1=Pending, 2=Approved, 3=Rejected
+    venue_pending = Booking.query.filter_by(status_id=1).count()
+    venue_approved = Booking.query.filter_by(status_id=2).count()
+    venue_rejected = Booking.query.filter_by(status_id=3).count()
+
+    # 2. EQUIPMENT REQUESTS (Breakdown - NEW)
+    equip_pending = Equipment_request.query.filter_by(status_id=1).count()
+    equip_approved = Equipment_request.query.filter_by(status_id=2).count()
+    equip_rejected = Equipment_request.query.filter_by(status_id=3).count()
+
+    # 3. USER COUNTS
+    student_count = Student.query.count()
+    lecturer_count = Lecturer.query.count()
+    organizer_count = Organizer.query.count()
 
     stats = {
-        'pending_bookings': total_pending, # Use the TOTAL here
-        'total_users': Student.query.count() + Organizer.query.count() + Lecturer.query.count(),
-        'upcoming_events': Event.query.filter(
-            Event.start_datetime > datetime.now(),
-            Event.event_status == 'Upcoming'  # This excludes 'Pending', 'Rejected', etc.
-        ).count()
+        # Card Totals
+        'pending_bookings': venue_pending + equip_pending,
+        'total_users': student_count + lecturer_count + organizer_count,
+        'upcoming_events': Event.query.filter(Event.start_datetime > datetime.now(), Event.event_status == 'Upcoming').count(),
+
+        # Chart 1: User Demographics
+        'chart_users': {
+            'Students': student_count,
+            'Lecturers': lecturer_count,
+            'Organizers': organizer_count
+        },
+
+        # Chart 2: Venue vs Equipment (Split Data)
+        'chart_venue': [venue_approved, venue_pending, venue_rejected],
+        'chart_equip': [equip_approved, equip_pending, equip_rejected]
     }
 
     return render_template("admin/admin_dashboard.html", admin=current_user, stats=stats)
@@ -104,26 +122,41 @@ def booking_action(booking_id, action):
 # ========================================================
 # 3. APPROVE/REJECT EQUIPMENT REQUEST (With Status Check)
 # ========================================================
-@admin_view.route('/equipment/<int:req_id>/action/<string:action>')
+@admin_view.route('/equipment_action/<int:req_id>/<action>', methods=['GET', 'POST'])
 @login_required
 def equipment_action(req_id, action):
-    req = Equipment_request.query.get_or_404(req_id)
-    
-    # --- NEW CHECK: PREVENT DUPLICATE ACTIONS ---
-    if req.status_id != 1:  # If not Pending
-        flash('Action not allowed. This request has already been processed.', 'warning')
-        return redirect(url_for('admin_view.process_requests'))
-    # --------------------------------------------
-    
-    if action == 'approve':
-        # Optional: Check stock logic could go here
-        req.status_id = 2  # Approved
-        flash(f'Equipment request for {req.equipment.item_name} approved.', 'success')
+    if not isinstance(current_user, Admin):
+        return redirect(url_for('auth.login'))
 
+    # 1. Fetch the Request
+    req = Equipment_request.query.get_or_404(req_id)
+    equipment_item = req.equipment # Access the related Equipment object
+
+    # 2. Handle Approval
+    if action == 'approve':
+        # CHECK: Is there enough stock?
+        if equipment_item.total_stock >= req.quantity:
+            # A. Deduct Stock
+            equipment_item.total_stock -= req.quantity
+            
+            # B. Update Status to Approved (ID 2 = Approved)
+            req.status_id = 2 
+            
+            flash(f'Request approved. {req.quantity} {equipment_item.item_name}(s) deducted from stock.', 'success')
+        else:
+            # Not enough stock
+            flash(f'Cannot approve: Insufficient stock. Only {equipment_item.total_stock} left.', 'danger')
+            return redirect(url_for('admin_view.process_requests'))
+
+    # 3. Handle Rejection
     elif action == 'reject':
-        req.status_id = 3  # Rejected
-        flash(f'Equipment request for {req.equipment.item_name} rejected.', 'danger')
-    
+        # If we are rejecting a request that was PREVIOUSLY approved, we must return the stock
+        if req.status_id == 2: # 2 = Approved
+             equipment_item.total_stock += req.quantity
+
+        req.status_id = 3 # 3 = Rejected
+        flash('Equipment request rejected.', 'warning')
+
     db.session.commit()
     return redirect(url_for('admin_view.process_requests'))
 
@@ -153,18 +186,39 @@ def manage_users():
 @admin_view.route('/users/delete/<type>/<id>', methods=['POST'])
 @login_required
 def delete_user(type, id):
-    if type == 'student': user = Student.query.get(id)
-    elif type == 'organizer': user = Organizer.query.get(id)
-    elif type == 'lecturer': user = Lecturer.query.get(id)
+    user = None
+    has_published_events = False
+
+    # 1. Fetch User & Check for Published Events
+    if type == 'student': 
+        user = Student.query.get(id)
+        
+    elif type == 'organizer': 
+        user = Organizer.query.get(id)
+        # Check if they have any 'Upcoming' events
+        if user and any(event.event_status == 'Upcoming' for event in user.events):
+            has_published_events = True
+            
+    elif type == 'lecturer': 
+        user = Lecturer.query.get(id)
+        # Check if they have any 'Upcoming' events
+        if user and any(event.event_status == 'Upcoming' for event in user.events):
+            has_published_events = True
     
+    # 2. Perform Action
     if user:
-        try:
-            db.session.delete(user)
-            db.session.commit()
-            flash('User account deleted successfully.', 'success')
-        except:
-            db.session.rollback()
-            flash('Cannot delete user. They may have active bookings or events.', 'danger')
+        if has_published_events:
+            # Custom message for published events
+            flash('Cannot delete user. They have published (Upcoming) events. Please remove the events first.', 'danger')
+        else:
+            try:
+                db.session.delete(user)
+                db.session.commit()
+                flash('User account deleted successfully.', 'success')
+            except Exception as e:
+                db.session.rollback()
+                # Fallback for other database constraints (like existing bookings)
+                flash('Cannot delete user. They may have active bookings or history records.', 'danger')
     else:
         flash('User not found.', 'danger')
         
@@ -172,7 +226,93 @@ def delete_user(type, id):
 
 
 # ========================================================
-# 5. CONFIGURE AVAILABLE SPACES
+# 5. CREATE USER ACCOUNT (Admin Only)
+# ========================================================
+@admin_view.route('/users/create', methods=['POST'])
+@login_required
+def create_user():
+    if not isinstance(current_user, Admin):
+        return redirect(url_for('auth.login'))
+
+    # 1. Get Form Data
+    user_type = request.form.get('user_type')
+    user_id = request.form.get('user_id')
+    name = request.form.get('name')
+    email = request.form.get('email')
+    phone = request.form.get('phone')
+    password = request.form.get('password')
+
+    try:
+        # --- CHECK IF EMAIL ALREADY EXISTS ---
+        # We check all 3 tables to ensure email uniqueness across the system
+        email_exists = (
+            Student.query.filter_by(student_email=email).first() or
+            Organizer.query.filter_by(organizer_email=email).first() or
+            Lecturer.query.filter_by(lecturer_email=email).first()
+        )
+
+        if email_exists:
+            flash(f'Error: The email "{email}" is already in use by another account.', 'danger')
+            return redirect(url_for('admin_view.manage_users'))
+        # ------------------------------------------
+
+        new_user = None
+
+        # 2. Create Object based on Type
+        if user_type == 'student':
+            if Student.query.get(user_id):
+                raise Exception(f'Student ID {user_id} already exists.')
+            
+            new_user = Student(
+                student_id=user_id,
+                student_name=name,
+                student_email=email,
+                student_phone=phone,
+                student_password=password 
+            )
+
+        elif user_type == 'organizer':
+            if Organizer.query.get(user_id):
+                raise Exception(f'Organizer ID {user_id} already exists.')
+
+            new_user = Organizer(
+                organizer_id=user_id,
+                organizer_name=name,
+                organizer_email=email,
+                organizer_phone=phone,
+                organizer_password=password
+            )
+
+        elif user_type == 'lecturer':
+            if Lecturer.query.get(user_id):
+                raise Exception(f'Lecturer ID {user_id} already exists.')
+
+            new_user = Lecturer(
+                lecturer_id=user_id,
+                lecturer_name=name,
+                lecturer_email=email,
+                lecturer_phone=phone,
+                lecturer_password=password
+            )
+        
+        else:
+            flash('Invalid user type selected.', 'danger')
+            return redirect(url_for('admin_view.manage_users'))
+
+        # 3. Save to Database
+        db.session.add(new_user)
+        db.session.commit()
+        flash(f'New {user_type.capitalize()} account ({name}) created successfully.', 'success')
+
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error creating account: {str(e)}', 'danger')
+
+    return redirect(url_for('admin_view.manage_users'))
+
+
+# ========================================================
+# 6. CONFIGURE AVAILABLE SPACES
 # ========================================================
 @admin_view.route('/spaces', methods=['GET', 'POST'])
 @login_required
@@ -229,7 +369,7 @@ def manage_rooms():
 
 
 # ========================================================
-# 6. SEND SYSTEM ANNOUNCEMENTS
+# 7. SEND SYSTEM ANNOUNCEMENTS
 # ========================================================
 @admin_view.route('/announcements', methods=['GET', 'POST'])
 @login_required
@@ -259,7 +399,7 @@ def manage_announcements():
 
 
 # ========================================================
-# 7. MONITOR ALL EVENT SCHEDULES
+# 8. MONITOR ALL EVENT SCHEDULES
 # ========================================================
 @admin_view.route('/monitor-events')
 @login_required
@@ -303,7 +443,7 @@ def get_calendar_events():
 
 
 # ========================================================
-# VIEW EVENT DETAILS (The Route for Single Event)
+# 9. VIEW EVENT DETAILS (The Route for Single Event)
 # ========================================================
 @admin_view.route('/event/<int:event_id>/details')
 @login_required
@@ -326,7 +466,7 @@ def view_event(event_id):
     
     
 # ========================================================
-# 8. MANAGE EVENT CATEGORIES
+# 10. MANAGE EVENT CATEGORIES
 # ========================================================
 @admin_view.route('/categories', methods=['GET', 'POST'])
 @login_required
@@ -406,3 +546,37 @@ def manage_categories():
     
     categories = query.all()
     return render_template("admin/manage_categories.html", categories=categories)
+
+# ========================================================
+# 9. DELETE EVENT (Admin Action)
+# ========================================================
+@admin_view.route('/event/<int:event_id>/delete', methods=['POST'])
+@login_required
+def delete_event(event_id):
+    if not isinstance(current_user, Admin):
+        return redirect(url_for('auth.login'))
+
+    event = Event.query.get_or_404(event_id)
+    event_title = event.title
+
+    try:
+        # 1. Delete Related Venue Bookings
+        Booking.query.filter_by(event_id=event_id).delete()
+
+        # 2. Delete Related Equipment Requests
+        Equipment_request.query.filter_by(event_id=event_id).delete()
+
+        # 3. Delete Participant Registrations
+        Registration.query.filter_by(event_id=event_id).delete()
+
+        # 4. Finally, Delete the Event itself
+        db.session.delete(event)
+        db.session.commit()
+
+        flash(f'Event "{event_title}" and all associated records have been permanently deleted.', 'success')
+    
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting event: {str(e)}', 'danger')
+
+    return redirect(url_for('admin_view.monitor_events'))
