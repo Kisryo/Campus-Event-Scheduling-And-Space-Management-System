@@ -93,7 +93,7 @@ def dashboard():
     # ---------------------------------------------------------
     # 4. PAGINATION & RENDER
     # ---------------------------------------------------------
-    events_paginated = query.paginate(page=page, per_page=9, error_out=False)
+    events_paginated = query.paginate(page=page, per_page=6, error_out=False)
 
     return render_template('organizer/organizer_dashboard.html', 
                            user=current_user,
@@ -116,7 +116,7 @@ def my_events():
     page = request.args.get('page', 1, type=int)
     my_events_paginated = Event.query.filter_by(organizer_id=current_user.organizer_id)\
         .order_by(Event.start_datetime.desc())\
-        .paginate(page=page, per_page=9, error_out=False)
+        .paginate(page=page, per_page=6, error_out=False)
     
     # PASS 'now' variable
     return render_template('organizer/my_events.html', 
@@ -266,30 +266,47 @@ def edit_event(event_id):
     event = Event.query.get_or_404(event_id)
     if event.organizer_id != current_user.organizer_id: return redirect(url_for('auth.index'))
     
-    # RESTRICTION: Only Drafts (Pending) can be edited
     if event.event_status != 'Pending':
         flash('Cannot edit a published event.', 'danger')
         return redirect(url_for('organizer_view.manage_event', event_id=event_id))
     
-    # INPUT VALIDATION 
+    # 1. Capture Inputs
     title = request.form.get('title')
     description = request.form.get('description')
     capacity = request.form.get('capacity')
+    start_str = request.form.get('start_datetime') # New
+    end_str = request.form.get('end_datetime')     # New
 
-    # A. Check for missing fields
-    if not title or not description or not capacity:
-        flash('Error: Title, Description, and Capacity are required.', 'warning')
+    # 2. Validation
+    if not title or not description or not capacity or not start_str or not end_str:
+        flash('Error: All fields are required.', 'warning')
         return redirect(url_for('organizer_view.manage_event', event_id=event_id))
 
-    # B. Check for invalid capacity (must be a positive number)
     if not capacity.isdigit() or int(capacity) <= 0:
         flash('Error: Capacity must be a valid positive number.', 'warning')
         return redirect(url_for('organizer_view.manage_event', event_id=event_id))
 
-    # Update Fields
-    event.title = request.form.get('title')
-    event.description = request.form.get('description')
-    event.capacity = request.form.get('capacity')
+    # 3. Convert Date Strings -> Datetime Objects
+    try:
+        # HTML datetime-local format: '2025-12-31T23:59'
+        new_start = datetime.strptime(start_str, '%Y-%m-%dT%H:%M')
+        new_end = datetime.strptime(end_str, '%Y-%m-%dT%H:%M')
+
+        # Logic Check: End must be after Start
+        if new_end <= new_start:
+            flash('Error: End time must be after start time.', 'danger')
+            return redirect(url_for('organizer_view.manage_event', event_id=event_id))
+            
+    except ValueError:
+        flash('Error: Invalid date format.', 'danger')
+        return redirect(url_for('organizer_view.manage_event', event_id=event_id))
+
+    # 4. Update Event Fields
+    event.title = title
+    event.description = description
+    event.capacity = capacity
+    event.start_datetime = new_start # Update DB
+    event.end_datetime = new_end     # Update DB
     
     image_file = request.files.get('event_img')
     if image_file:
@@ -297,17 +314,16 @@ def edit_event(event_id):
         if new_filename:
             event.event_img = new_filename
 
-    # Check for Publish Action
+    # 5. Handle Publish/Save
     action = request.form.get('action')
     if action == 'publish':
         event.event_status = 'Upcoming'
         flash('Event Published Successfully!', 'success')
     else:
-        flash('Draft updated successfully.', 'success')
+        flash('Event details updated successfully.', 'success')
 
     db.session.commit()
     return redirect(url_for('organizer_view.manage_event', event_id=event_id))
-
 
 # ========================================================
 # 6. BOOK VENUE
@@ -316,22 +332,29 @@ def edit_event(event_id):
 @login_required
 def book_venue(event_id):
     event = Event.query.get_or_404(event_id)
-    room_id = request.form.get('room_id')
+    
+    # Convert room_id to Integer immediately
+    try:
+        room_id = int(request.form.get('room_id'))
+    except (ValueError, TypeError):
+        flash('Invalid room selected.', 'danger')
+        return redirect(url_for('organizer_view.manage_event', event_id=event_id))
 
-    # 1. Check for Conflicts
-    # Ensure we exclude 'Rejected' (id=3) bookings from the conflict check
+    # Robust Conflict Check
+    # We check for ANY overlap in time for the SAME room
+    # Logic: (StartA < EndB) and (EndA > StartB)
     overlap = Booking.query.filter(
         Booking.room_id == room_id, 
-        Booking.status_id.notin_([3]),
+        Booking.status_id.notin_([3]), # Ignore Rejected(3)
         Booking.req_start_datetime < event.end_datetime, 
         Booking.req_end_datetime > event.start_datetime
     ).first()
 
     if overlap:
-        flash('Booking Conflict: This room is already booked for that time.', 'danger')
+        flash(f'Booking Conflict: This room is already taken during {overlap.req_start_datetime} - {overlap.req_end_datetime}.', 'danger')
         return redirect(url_for('organizer_view.manage_event', event_id=event_id))
 
-    # 2. Create New Booking Request
+    # 4. Create New Booking Request
     new_booking = Booking(
         booking_date=datetime.now(), 
         req_start_datetime=event.start_datetime, 
@@ -342,7 +365,6 @@ def book_venue(event_id):
         req_organizer_id=current_user.organizer_id
     )
 
-    # 3. SET LOCATION TO PENDING (Do not set the actual room name yet)
     event.venue_location = "Pending Approval"
 
     db.session.add(new_booking)
@@ -361,15 +383,7 @@ def request_equipment(event_id):
     equipment_id = request.form.get('equipment_id')
     quantity = int(request.form.get('quantity'))
     
-    # 1. Fetch the Equipment to check stock
-    item = Equipments.query.get_or_404(equipment_id)
-    
-    # 2. Check if requested quantity exceeds stock
-    if quantity > item.total_stock:
-        flash(f'Error: Only {item.total_stock} units of {item.item_name} are available.', 'danger')
-        return redirect(url_for('organizer_view.manage_event', event_id=event_id))
-    
-    # 3. Proceed if valid
+    # 1. Proceed if valid
     new_req = Equipment_request(
         quantity=quantity, 
         status_id=1, # Pending
@@ -489,3 +503,16 @@ def announcements():
     return render_template('organizer/announcements.html', 
                            user=current_user, 
                            announcements=all_announcements)
+    
+@organizer_view.context_processor
+def inject_announcement_ids():
+    if current_user.is_authenticated:
+        # Fetch the ALL announcement IDs to check for notifications
+        recent_anns = Announcements.query.filter(
+            Announcements.target_audience.in_(['All', 'Organizer'])
+        ).order_by(Announcements.sent_at.desc()).all()
+        
+        # Pass the list of IDs to all templates
+        return dict(recent_announcement_ids=[a.announcement_id for a in recent_anns])
+    
+    return dict(recent_announcement_ids=[])
