@@ -1,44 +1,128 @@
 {% extends 'admin/base_admin.html' %}
 {% block title %}System Announcements{% endblock %}
+
 {% block content %}
+
 <div class="container mt-4">
-    <h2>Send Notification</h2>
-    {% include 'flash_messages.html' %}
+    <h2><i class="fas fa-bell mr-2"></i> Send Notification</h2>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
     <div class="card mb-4">
         <div class="card-body">
             <form method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
                 <div class="form-group">
                     <label>Target Audience</label>
-                    <select name="target" class="form-control">
+                    <select name="target" id="targetSelect" class="form-control" onchange="toggleRecipientInput()">
                         <option value="All">All Users</option>
                         <option value="Student">Students Only</option>
                         <option value="Organizer">Organizers Only</option>
                         <option value="Lecturer">Lecturers Only</option>
+                        <option value="Specific">Specific User (ID)</option>
                     </select>
                 </div>
+
+                <div class="form-group" id="recipientInput" style="display: none;">
+                    <label>Recipient User ID</label>
+                    <input type="text" name="recipient_id" class="form-control" placeholder="Enter Student/Staff ID (e.g., 1221101234 or LE01)">
+                </div>
+
                 <div class="form-group">
                     <label>Title</label>
-                    <input type="text" name="title" class="form-control" placeholder="Subject">
+                    <input type="text" name="title" class="form-control" placeholder="Subject" required>
                 </div>
+
                 <div class="form-group">
                     <label>Message</label>
-                    <textarea name="message" class="form-control" rows="3" placeholder="Type your message here..."></textarea>
+                    <textarea name="message" class="form-control" rows="4" placeholder="Type your message here..." required></textarea>
                 </div>
-                <button type="submit" class="btn btn-primary">Send Notification</button>
+
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane mr-1"></i> Send Notification
+                </button>
             </form>
         </div>
     </div>
 
-    <h4>History</h4>
+    <h4><i class="fas fa-history mr-2"></i> History</h4>
+    {% if history|length == 0 %}
+        <div class="alert alert-light">No notifications sent yet.</div>
+    {% else %}
     <ul class="list-group">
         {% for h in history %}
         <li class="list-group-item">
-            <strong>{{ h.title }}</strong> (To: {{ h.target_audience }}) - <small>{{ h.sent_at }}</small>
-            <p class="mb-0">{{ h.message }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+                <strong>{{ h.title }}</strong>
+                
+                {% if h.target_audience == "All" %}
+                    <span class="badge badge-all">All Users</span>
+                {% elif h.target_audience == "Student" %}
+                    <span class="badge badge-student">Students</span>
+                {% elif h.target_audience == "Organizer" %}
+                    <span class="badge badge-organizer">Organizers</span>
+                {% elif h.target_audience == "Lecturer" %}
+                    <span class="badge badge-lecturer">Lecturers</span>
+                {% else %}
+                    <span class="badge badge-specific">User: {{ h.target_audience }}</span>
+                {% endif %}
+            </div>
+            
+            <small class="d-block text-muted mt-1">{{ h.sent_at.strftime('%d %b %Y, %I:%M %p') }}</small>
+            <p class="mt-2 mb-0">{{ h.message }}</p>
         </li>
         {% endfor %}
     </ul>
+    {% endif %}
 </div>
+
+<script>
+    function toggleRecipientInput() {
+        var select = document.getElementById("targetSelect");
+        var inputDiv = document.getElementById("recipientInput");
+        
+        if (select.value === "Specific") {
+            inputDiv.style.display = "block";
+            inputDiv.querySelector('input').required = true;
+        } else {
+            inputDiv.style.display = "none";
+            inputDiv.querySelector('input').required = false;
+        }
+    }
+</script>
+
+<style>
+/* =============================
+   GENERAL & CARD
+============================= */
+.container { max-width: 900px; }
+h2, h4 { color: #1f2937; font-weight: 700; margin-bottom: 20px; }
+.card { border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); padding: 20px; background: #f9fafb; border:none; }
+.form-control { border-radius: 12px; }
+.btn-primary { border-radius: 25px; padding: 8px 20px; font-weight: 600; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; }
+.btn-primary:hover { background: linear-gradient(135deg, #1d4ed8, #1e40af); }
+
+/* =============================
+   HISTORY LIST
+============================= */
+.list-group-item { border-radius: 12px; margin-bottom: 10px; padding: 15px 20px; background: #ffffff; border: 1px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+
+/* =============================
+   BADGES
+============================= */
+.badge { font-size: 0.85rem; padding: 6px 12px; border-radius: 20px; font-weight: 500; }
+.badge-all { background-color: #2563eb; color: white; }      /* Blue */
+.badge-student { background-color: #16a34a; color: white; }  /* Green */
+.badge-organizer { background-color: #f59e0b; color: white; }/* Orange */
+.badge-lecturer { background-color: #9333ea; color: white; } /* Purple */
+.badge-specific { background-color: #4b5563; color: white; } /* Dark Grey */
+</style>
+
 {% endblock %}
