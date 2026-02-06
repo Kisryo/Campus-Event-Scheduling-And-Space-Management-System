@@ -354,7 +354,7 @@ def book_venue(event_id):
         flash(f'Booking Conflict: This room is already taken during {overlap.req_start_datetime} - {overlap.req_end_datetime}.', 'danger')
         return redirect(url_for('organizer_view.manage_event', event_id=event_id))
 
-    # 4. Create New Booking Request
+    # 1. Create New Booking Request
     new_booking = Booking(
         booking_date=datetime.now(), 
         req_start_datetime=event.start_datetime, 
@@ -492,8 +492,9 @@ def view_event_details(event_id):
 @login_required
 def announcements():
     try:
+        # UPDATED: Added current_user.organizer_id to the filter list
         all_announcements = Announcements.query.filter(
-            Announcements.target_audience.in_(['All', 'Organizer'])
+            Announcements.target_audience.in_(['All', 'Organizer', current_user.organizer_id])
         ).order_by(Announcements.sent_at.desc()).all()
         
     except Exception as e:
@@ -507,12 +508,56 @@ def announcements():
 @organizer_view.context_processor
 def inject_announcement_ids():
     if current_user.is_authenticated:
-        # Fetch the ALL announcement IDs to check for notifications
+        # UPDATED: Added current_user.organizer_id to the filter list here too
         recent_anns = Announcements.query.filter(
-            Announcements.target_audience.in_(['All', 'Organizer'])
+            Announcements.target_audience.in_(['All', 'Organizer', current_user.organizer_id])
         ).order_by(Announcements.sent_at.desc()).all()
         
         # Pass the list of IDs to all templates
         return dict(recent_announcement_ids=[a.announcement_id for a in recent_anns])
     
     return dict(recent_announcement_ids=[])
+
+# ========================================================
+# 12. DELETE EVENT (Drafts Only)
+# ========================================================
+@organizer_view.route('/event/<int:event_id>/delete', methods=['POST'])
+@login_required
+def delete_event(event_id):
+    event = Event.query.get_or_404(event_id)
+    
+    # 1. Security Check: Ensure the current user owns this event
+    if event.organizer_id != current_user.organizer_id:
+        flash('Unauthorized action.', 'danger')
+        return redirect(url_for('organizer_view.my_events'))
+
+    # 2. Status Check: Only allow deletion of 'Pending' (Draft) events
+    # We prevent deleting 'Upcoming' events because students might have already registered.
+    if event.event_status != 'Pending':
+        flash('Cannot delete a published or expired event.', 'warning')
+        return redirect(url_for('organizer_view.my_events'))
+
+    try:
+        # -------------------------------------------------------------
+        # 3. MANUAL CASCADE DELETE
+        # Delete children records first to prevent Foreign Key errors
+        # -------------------------------------------------------------
+        
+        # A. Delete Equipment Requests linked to this event
+        Equipment_request.query.filter_by(event_id=event_id).delete()
+        
+        # B. Delete Venue Bookings linked to this event
+        Booking.query.filter_by(event_id=event_id).delete()
+        
+        # 4. Delete the Event itself
+        db.session.delete(event)
+        db.session.commit()
+        
+        flash('Draft event and its booking requests were deleted successfully.', 'success')
+        
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while deleting the event.', 'danger')
+        print(f"Delete Error: {e}")
+
+    return redirect(url_for('organizer_view.my_events'))
