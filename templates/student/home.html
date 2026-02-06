@@ -4,70 +4,96 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
 {% endblock %}
 
-{% block title %}All Events | MMUEvent{% endblock %}
+{% block title %}Home | MMUEvent{% endblock %}
 
 {% block content %}
 
-<div class="main-content-wrapper">
+<div class="main-content-wrapper mb-5">
   
-  <div class="header-section">
-    <h1>Upcoming Campus Events</h1>
-    <p>Browse all approved events happening around campus.</p>
+  <div class="header-section text-center mb-5">
+    <h1 class="font-weight-bold">Welcome, {{ current_user.student_name.split()[0] }}!</h1>
+    <p class="text-muted">Discover what's happening on campus today.</p>
   </div>
 
-  {% if events|length == 0 %}
-      <div class="no-events-box">
-          <h2>No upcoming events found.</h2>
-          <p>Check back later for updates!</p>
-      </div>
+  <div class="section-header d-flex justify-content-between align-items-center mb-3 px-2">
+      <h3 class="font-weight-bold text-dark border-left-primary pl-3">📅 Upcoming Events</h3>
+      <a href="{{ url_for('student_view.events') }}" class="text-primary small font-weight-bold">View All <i class="fas fa-arrow-right ml-1"></i></a>
+  </div>
+
+  {% if upcoming_events|length == 0 %}
+      <div class="alert alert-light text-center shadow-sm">No upcoming events found.</div>
   {% else %}
-      <div class="event-grid-container">
-        {% for event in events %}
+      <div class="event-grid-container mb-5">
+        {% for event in upcoming_events %}
         <div class="event-card shadow-sm">
             <div class="event-img-wrapper">
-                <img src="{{ url_for('static', filename='images/' ~ (event.event_img if event.event_img else 'default.jpg')) }}" 
-                     alt="{{ event.title }}">
+                <img src="{{ url_for('static', filename='images/' ~ (event.event_img if event.event_img else 'default.jpg')) }}" alt="{{ event.title }}">
+                <span class="badge badge-primary position-absolute m-2" style="top:0; left:0;">Upcoming</span>
             </div>
             
             <div class="event-details">
-                <h3 class="event-title">{{ event.title }}</h3>
+                <h3 class="event-title text-truncate">{{ event.title }}</h3>
                 
-                <p class="organizer-label">
-                    <i class="fas fa-user-circle"></i>{{ event.lecturer_id or event.organizer_id }}
+                <p class="event-date font-weight-bold mb-1 text-dark small">
+                    <i class="far fa-calendar-alt mr-2 text-success"></i> {{ event.start_datetime.strftime('%d %b, %I:%M %p') }}
                 </p>
                 
-                <p class="event-date font-weight-bold mb-1 text-dark">
-                    <i class="far fa-calendar-alt mr-2 text-success"></i> {{ event.start_datetime.strftime('%d %b %Y, %I:%M %p') }}
-                </p>
-                
-                <p class="event-location font-weight-bold mb-1 text-dark">
-                    <i class="fas fa-map-marker-alt"></i> 
-                    
-                    {# 1. Search for an Approved Booking attached to this event #}
+                <p class="event-location font-weight-bold mb-3 text-dark small">
+                    <i class="fas fa-map-marker-alt mr-2 text-danger"></i> 
                     {% set ns = namespace(confirmed_venue=none) %}
                     {% for b in event.bookings %}
                         {% if b.status.status_name == 'Approved' %}
                             {% set ns.confirmed_venue = b.room.room_name %}
                         {% endif %}
                     {% endfor %}
-
-                    {# 2. Display Logic #}
-                    {% if ns.confirmed_venue %}
-                        {# Case A: Found an approved booking -> Show Room Name #}
-                        {{ ns.confirmed_venue }}
-                        
-                    {% elif event.venue_location == 'Pending Approval' %}
-                        {# Case B: Status is specifically 'Pending Approval' -> Show Warning Text #}
-                        <span style="color: #ffc107; font-weight: bold;">Pending Approval</span>
-                        
-                    {% else %}
-                        {# Case C: Default text (TBA or whatever is saved) #}
-                        {{ event.venue_location if event.venue_location else 'Venue TBD' }}
-                    {% endif %}
+                    {{ ns.confirmed_venue if ns.confirmed_venue else (event.venue_location if event.venue_location else 'Venue TBD') }}
                 </p>
 
                 <a href="{{ url_for('student_view.event_details', event_id=event.event_id) }}">
-                    <button class="view-details-btn">View Details</button>
+                    <button class="view-details-btn btn-sm">View Details</button>
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+      </div>  
+  {% endif %}
+
+
+  <div class="section-header d-flex justify-content-between align-items-center mb-3 mt-5 px-2">
+      <h3 class="font-weight-bold text-dark border-left-info pl-3">🔥 New Event</h3>
+  </div>
+
+  {% if new_events|length == 0 %}
+      <div class="alert alert-light text-center shadow-sm">No new events added recently.</div>
+  {% else %}
+      <div class="event-grid-container">
+        {% for event in new_events %}
+        <div class="event-card shadow-sm">
+            <div class="event-img-wrapper">
+                <img src="{{ url_for('static', filename='images/' ~ (event.event_img if event.event_img else 'default.jpg')) }}" alt="{{ event.title }}">
+                <span class="badge badge-danger position-absolute m-2" style="top:0; left:0;">New</span>
+            </div>
+            
+            <div class="event-details">
+                <h3 class="event-title text-truncate">{{ event.title }}</h3>
+                
+                <p class="event-date font-weight-bold mb-1 text-dark small">
+                    <i class="far fa-calendar-alt mr-2 text-success"></i> {{ event.start_datetime.strftime('%d %b, %I:%M %p') }}
+                </p>
+                
+                <p class="event-location font-weight-bold mb-3 text-dark small">
+                    <i class="fas fa-map-marker-alt mr-2 text-danger"></i> 
+                    {% set ns = namespace(confirmed_venue=none) %}
+                    {% for b in event.bookings %}
+                        {% if b.status.status_name == 'Approved' %}
+                            {% set ns.confirmed_venue = b.room.room_name %}
+                        {% endif %}
+                    {% endfor %}
+                    {{ ns.confirmed_venue if ns.confirmed_venue else (event.venue_location if event.venue_location else 'Venue TBD') }}
+                </p>
+
+                <a href="{{ url_for('student_view.event_details', event_id=event.event_id) }}">
+                    <button class="view-details-btn btn-sm">View Details</button>
                 </a>
             </div>
         </div>
