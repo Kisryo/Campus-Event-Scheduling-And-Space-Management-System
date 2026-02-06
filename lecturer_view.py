@@ -480,8 +480,9 @@ def view_event_details(event_id):
 @login_required
 def announcements():
     try:
+        # UPDATED: Added current_user.lecturer_id to the filter list
         all_announcements = Announcements.query.filter(
-            Announcements.target_audience.in_(['All', 'Lecturer'])
+            Announcements.target_audience.in_(['All', 'Lecturer', current_user.lecturer_id])
         ).order_by(Announcements.sent_at.desc()).all()
         
     except Exception as e:
@@ -495,11 +496,47 @@ def announcements():
 @lecturer_view.context_processor
 def inject_announcement_ids():
     if current_user.is_authenticated:
-        # Fetch ALL relevant announcements for Lecturers
+        # UPDATED: Added current_user.lecturer_id here too for the notification badge
         recent_anns = Announcements.query.filter(
-            Announcements.target_audience.in_(['All', 'Lecturer'])
+            Announcements.target_audience.in_(['All', 'Lecturer', current_user.lecturer_id])
         ).order_by(Announcements.sent_at.desc()).all()
         
         return dict(recent_announcement_ids=[a.announcement_id for a in recent_anns])
     
     return dict(recent_announcement_ids=[])
+
+
+# ========================================================
+# 12. DELETE EVENT (Drafts Only)
+# ========================================================
+@lecturer_view.route('/lecturer/event/<int:event_id>/delete', methods=['POST'])
+@login_required
+def delete_event(event_id):
+    event = Event.query.get_or_404(event_id)
+    
+    # 1. Security Check: Ensure current lecturer owns this event
+    if event.lecturer_id != current_user.lecturer_id:
+        flash('Unauthorized action.', 'danger')
+        return redirect(url_for('lecturer_view.my_events'))
+
+    # 2. Status Check: Only allow deletion of 'Pending' (Draft) events
+    if event.event_status != 'Pending':
+        flash('Cannot delete a published or expired event.', 'warning')
+        return redirect(url_for('lecturer_view.my_events'))
+
+    try:
+        # 3. Manual Cascade Delete (Clean up related requests first)
+        Equipment_request.query.filter_by(event_id=event_id).delete()
+        Booking.query.filter_by(event_id=event_id).delete()
+        
+        # 4. Delete the Event
+        db.session.delete(event)
+        db.session.commit()
+        
+        flash('Draft workshop deleted successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('An error occurred while deleting the event.', 'danger')
+        print(f"Delete Error: {e}")
+
+    return redirect(url_for('lecturer_view.my_events'))
