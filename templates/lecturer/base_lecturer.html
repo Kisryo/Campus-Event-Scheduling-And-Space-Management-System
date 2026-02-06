@@ -7,38 +7,92 @@
     
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"/>
     <script src="https://kit.fontawesome.com/8d1db3e4f7.js" crossorigin="anonymous"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     {% block head %}{% endblock %}
 
     <style>
-        body { background-color: #f8f9fc; font-family: 'Segoe UI', sans-serif; }
-        .navbar-lecturer { background-color: #2c3e50; } 
-        .navbar-lecturer .navbar-brand, .navbar-lecturer .nav-link { color: #fff !important; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fc;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Navbar Styling - Lecturer Theme (Dark Blue) */
+        .navbar-lecturer {
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background-color: #2c3e50; 
+            padding: 0.8rem 2rem;
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            color: #4e73df !important; /* Blue accent for Lecturer */
+        }
+        
+        .navbar-brand span {
+            color: #ffffff;
+        }
+
+        .nav-link {
+            font-weight: 600;
+            color: #ffffff !important;
+            margin-left: 15px;
+            transition: color 0.2s;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            color: #4e73df !important;
+        }
+
+        /* Content Wrapper */
+        main {
+            flex: 1; 
+        }
+
+        /* Footer */
+        footer {
+            background-color: #2c3e50;
+            border-top: 1px solid #e3e6f0;
+            padding: 20px 0;
+            text-align: center;
+            color: #f1f1f3;
+            margin-top: 50px;
+        }
     </style>
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-lecturer fixed-top shadow-sm">
+    <nav class="navbar navbar-expand-lg navbar-lecturer fixed-top">
         <div class="container">
-            <a class="navbar-brand font-weight-bold" href="{{ url_for('lecturer_view.dashboard') }}">
-                MMU<span>Event</span> <small class="text-muted ml-1" style="font-size: 0.6em; color: #ccc !important;">LECTURER</small>
+            <a class="navbar-brand" href="{{ url_for('lecturer_view.dashboard') }}">
+                MMU<span>Event</span> <small class="text-muted ml-1" style="font-size: 0.5em; color: #ccc !important; vertical-align: middle;">LECTURER</small>
             </a>
             
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
+                <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ml-auto">
+                <ul class="navbar-nav ml-auto align-items-center">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('lecturer_view.my_events') }}">Manage Events</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('lecturer_view.create_event') }}">Create Workshop</a>
                     </li>
+                    
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('lecturer_view.announcements') }}">Announcements</a>
+                        <a class="nav-link position-relative" href="{{ url_for('lecturer_view.announcements') }}">
+                            Announcements
+                            <span id="announcement-badge" class="badge badge-danger badge-pill position-absolute" 
+                                  style="top: 0; right: -5px; font-size: 0.6rem; display: none;">
+                                0
+                            </span>
+                        </a>
                     </li>
+
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('lecturer_view.booking_history') }}">Bookings</a>
                     </li>
@@ -46,11 +100,17 @@
                         <a class="nav-link" href="{{ url_for('lecturer_view.view_feedback') }}">Feedbacks</a>
                     </li>
                     
-                    <li class="nav-item dropdown ml-3">
-                        <a class="nav-link dropdown-toggle" href="#" data-toggle="dropdown">
-                            <i class="fas fa-user-circle"></i> {{ current_user.lecturer_name }}
+                    <li class="nav-item dropdown ml-2">
+                        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown">
+                            <i class="fas fa-user-circle fa-lg text-primary"></i>
                         </a>
-                        <div class="dropdown-menu dropdown-menu-right">
+                        <div class="dropdown-menu dropdown-menu-right shadow border-0" aria-labelledby="navbarDropdown">
+                            <div class="dropdown-header">Signed in as <b>{{ current_user.lecturer_name.split()[1] }}</b></div>
+                            <div class="dropdown-divider"></div>
+
+                            <a class="dropdown-item" href="#" data-toggle="modal" data-target="#lecturerProfileModal">My Profile</a>
+                            
+                            <div class="dropdown-divider"></div>
                             <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}">Logout</a>
                         </div>
                     </li>
@@ -61,12 +121,96 @@
 
     <div style="height: 80px;"></div> 
 
-    <main class="container mt-4 mb-5">
-        {% block content %}{% endblock %}
+    <main>
+        <div class="container mt-4 mb-5">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                      <span aria-hidden="true">&times;</span>
+                    </button>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+            
+            {% block content %}{% endblock %}
+        </div>
     </main>
+
+    <footer>
+        <div class="container">
+            <small>&copy; 2025 MMU Event Management System. All Rights Reserved.</small>
+        </div>
+    </footer>
+
+    <div class="modal fade" id="lecturerProfileModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 15px; overflow: hidden;">
+                <div style="height: 120px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); position: relative;">
+                    <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close" style="position: absolute; top: 15px; right: 20px; opacity: 0.8;">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body text-center px-5 pb-5" style="margin-top: -60px;">
+                    <div class="avatar-circle shadow mx-auto mb-3" style="width: 100px; height: 100px; background-color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; font-weight: bold; color: #5a67d8; border: 4px solid white;">
+                        {{ current_user.lecturer_name[0] | upper }}
+                    </div>
+                    <h3 class="font-weight-bold text-dark mb-1">{{ current_user.lecturer_name }}</h3>
+                    <p class="text-muted mb-4">ID: {{ current_user.lecturer_id }}</p>
+                    <div class="row text-left mb-4">
+                        <div class="col-12 mb-2">
+                            <small class="text-uppercase text-muted font-weight-bold">Email</small>
+                            <p class="text-dark mb-0">{{ current_user.lecturer_email }}</p>
+                        </div>
+                        <div class="col-12">
+                            <small class="text-uppercase text-muted font-weight-bold">Phone</small>
+                            <p class="text-dark mb-0">{{ current_user.lecturer_phone }}</p>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <a href="{{ url_for('auth.reset_password') }}" class="btn btn-info rounded-pill px-5 shadow-sm" style="background-color: #5a67d8; border: none;">
+                            Change Password
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    {% block scripts %}{% endblock %}
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var userId = "{{ current_user.lecturer_id }}";
+            var storageKey = 'read_announcements_' + userId;
+            var serverIds = {{ recent_announcement_ids | tojson }};
+            var readList = JSON.parse(localStorage.getItem(storageKey) || '[]');
+            var unreadCount = 0;
+            
+            if (serverIds && serverIds.length > 0) {
+                serverIds.forEach(function(id) {
+                    if (!readList.includes(id.toString())) {
+                        unreadCount++;
+                    }
+                });
+            }
+
+            var badge = document.getElementById('announcement-badge');
+            if (badge) {
+                if (unreadCount > 0) {
+                    badge.innerText = unreadCount;
+                    badge.style.display = 'inline-block';
+                } else {
+                    badge.style.display = 'none';
+                }
+            }
+        });
+    </script>
 </body>
 </html>
