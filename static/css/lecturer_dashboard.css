@@ -152,7 +152,9 @@
     filter: grayscale(80%);
     transition: all 0.3s;
 }
+
 .expired-card:hover {
     opacity: 1;
     filter: grayscale(0%);
 }
+
