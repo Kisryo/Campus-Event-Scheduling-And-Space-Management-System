@@ -15,7 +15,8 @@
     <p>Browse active clubs and view their upcoming events.</p>
   </div>
 
-  {% if organizers|length == 0 %}
+  {# UPDATED: Check .items length or total count #}
+  {% if organizers.items|length == 0 %}
       <div class="no-events-box">
           <h2>No active clubs found.</h2>
           <p>Check back later for updates!</p>
@@ -23,14 +24,15 @@
   {% else %}
       
       <div class="event-grid-container">
-        {% for org in organizers %}
+        {# UPDATED: Loop through 'organizers.items' instead of 'organizers' #}
+        {% for org in organizers.items %}
         <div class="event-card shadow-sm" style="display: flex; flex-direction: column; justify-content: center;">
             
             <div class="event-details text-center" style="padding: 40px 20px;">
-                <h3 class="event-title mb-2" style="font-size: 1.5rem;">{{ org.organizer_name }}</h3>
+                <h3 class="event-title mb-1" style="font-size: 1.5rem;">{{ org.organizer_name }}</h3>
                 
-                <p class="text-muted small mb-4" style="text-transform: uppercase; letter-spacing: 1px;">
-                    Campus Organizer
+                <p class="text-primary font-weight-bold mb-2" style="font-size: 0.9rem;">
+                    ID: {{ org.organizer_id }}
                 </p>
 
                 <div style="margin-bottom: 30px; font-size: 0.95rem; color: #555;">
@@ -51,6 +53,34 @@
         </div>
         {% endfor %}
       </div>  
+
+      <div class="pagination">
+        {% if organizers.has_prev %}
+            <li>
+                <a href="{{ url_for('student_view.organizers', page=organizers.prev_num, search=request.args.get('search', '')) }}">&laquo; Prev</a>
+            </li>
+        {% endif %}
+        
+        {% for page_num in organizers.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+            {% if page_num %}
+                {% if organizers.page == page_num %}
+                    <li class="active"><a href="#">{{ page_num }}</a></li>
+                {% else %}
+                    <li>
+                        <a href="{{ url_for('student_view.organizers', page=page_num, search=request.args.get('search', '')) }}">{{ page_num }}</a>
+                    </li>
+                {% endif %}
+            {% else %}
+                <li><span>...</span></li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if organizers.has_next %}
+            <li>
+                <a href="{{ url_for('student_view.organizers', page=organizers.next_num, search=request.args.get('search', '')) }}">Next &raquo;</a>
+            </li>
+        {% endif %}
+      </div>
 
   {% endif %}
 
