@@ -305,8 +305,9 @@ def view_club_events(organizer_id):
 @login_required
 def announcements():
     try:
+        # UPDATED: Added current_user.student_id to the filter list
         all_announcements = Announcements.query.filter(
-            Announcements.target_audience.in_(['All', 'Student'])
+            Announcements.target_audience.in_(['All', 'Student', current_user.student_id])
         ).order_by(Announcements.sent_at.desc()).all()
         
     except Exception as e:
@@ -320,9 +321,9 @@ def announcements():
 @student_view.context_processor
 def inject_announcement_ids():
     if current_user.is_authenticated:
-        # Fetch the ALL announcement IDs to check for notifications
+        # UPDATED: Added current_user.student_id here too for the notification badge
         recent_anns = Announcements.query.filter(
-            Announcements.target_audience.in_(['All', 'Student'])
+            Announcements.target_audience.in_(['All', 'Student', current_user.student_id])
         ).order_by(Announcements.sent_at.desc()).all()
         
         # Pass the list of IDs to all templates
