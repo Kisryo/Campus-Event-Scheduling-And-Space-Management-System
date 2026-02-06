@@ -1,48 +1,58 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-  <head>
-    <meta charset="UTF-8" />
+<head>
+    <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/login_signup.css') }}" />
-    <title>Login</title>
-  </head>
-
-  <body>
-    <div class="wrapper">
-      <form action="{{ url_for('auth.login') }}" method="POST">
-        <h1>Login</h1>
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-
-        <div class="input-box">
-          <input type="email" placeholder="Email Address" name="email" required />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/login_signup.css') }}">
+    <title>Login - CESMS</title>
+</head>
+<body>
+    <div class="container">
+         <!--Left panel  -->
+        <div class="left-panel">
+            <div class="circle c1"></div>
+            <div class="circle c2"></div>
+            <!-- Welcome text -->
+            <h2>Welcome Back!</h2>
+            <p>Please login to access your event dashboard.</p>
         </div>
-        
-        <div class="input-box">
-          <input type="password" placeholder="Password" name="password" required/>
-        </div>
+        <!-- Right panel -->
+        <div class="right-panel">
+            <form action="{{ url_for('auth.login') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
+                <h1>Login</h1>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <p class="alert-error">{{ message }}</p>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
 
-        <div class="login">
-          <button type="submit">Login</button>
-        </div>
+                <div class="input-box">
+                    <input type="email" placeholder="Email Address" name="email" required />
+                </div>
 
-        <div class="register-link">
-          <p>
-            New Student?
-            <a href="{{ url_for('auth.signup') }}">Create Account</a>
-          </p>
-        </div>
+                <div class="input-box">
+                    <input type="password" placeholder="Password" name="password" required />
+                </div>
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-          {% if messages %}
-            {% for category, message in messages %}
-              <div class="alert alert-{{ category }}" style="margin-top: 15px; color: red; text-align: center;">
-                  {{ message }}
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
-      </form>
+                <div style="text-align: right; margin-bottom: 15px;">
+                    <a href="{{ url_for('auth.forgot_password') }}" style="color: #666; font-size: 14px; text-decoration: none;">Forgot Password?</a>
+                </div>
+                            
+                <div>
+                    <input type="submit" value="Login">
+                </div>
+            
+                <div class="register-link">
+                    <p>Forgot? <a href="{{ url_for('auth.forgot_password') }}">Reset Password</a></p>
+                </div>
+            </form>
+        </div>
     </div>
-  </body>
+</body>
 </html>
