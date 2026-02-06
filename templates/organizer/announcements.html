@@ -6,7 +6,7 @@
     
     <div class="text-center mb-5">
         <h2 class="font-weight-bold" style="color: #000;">Campus Announcements</h2>
-        <p class="text-muted">View announcement.</p>
+        <p class="text-muted">View announcements.</p>
     </div>
 
     {% if announcements|length == 0 %}
@@ -68,34 +68,64 @@
 </div>
 
 <script>
+    var userId = "{{ current_user.organizer_id }}";
+    var storageKey = 'read_announcements_' + userId;
+
     function openAnnouncement(element) {
         var id = element.getAttribute('data-id');
         var title = element.getAttribute('data-title');
         var content = element.getAttribute('data-content');
         
+        // Populate Modal
         document.getElementById('modalTitle').innerText = title;
         document.getElementById('modalContent').innerText = content;
         
         $('#announcementModal').modal('show');
         
+        // Hide "New" badge on the specific item list
         var badge = document.getElementById('badge-' + id);
         if(badge) {
             badge.style.display = 'none';
         }
         
-        markAsReadStorage(id);
-    }
-
-    function markAsReadStorage(id) {
-        var readList = JSON.parse(localStorage.getItem('read_announcements') || '[]');
-        if (!readList.includes(id)) {
-            readList.push(id);
-            localStorage.setItem('read_announcements', JSON.stringify(readList));
+        // Save to Storage AND Decrement Navbar Badge
+        if(markAsReadStorage(id)) {
+            decrementNavbarBadge();
         }
     }
 
+    function markAsReadStorage(id) {
+        var readList = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        var strId = id.toString();
+        
+        // Only save if it wasn't already there
+        if (!readList.includes(strId)) {
+            readList.push(strId);
+            localStorage.setItem(storageKey, JSON.stringify(readList));
+            return true; // Return TRUE indicating this was a new read
+        }
+        return false; // Already read
+    }
+
+    function decrementNavbarBadge() {
+        var navBadge = document.getElementById('announcement-badge');
+        if(navBadge && navBadge.style.display !== 'none') {
+            var currentCount = parseInt(navBadge.innerText);
+            if(currentCount > 0) {
+                var newCount = currentCount - 1;
+                if(newCount <= 0) {
+                    navBadge.style.display = 'none';
+                } else {
+                    navBadge.innerText = newCount;
+                }
+            }
+        }
+    }
+
+    // On page load, hide "New" badges for items already in history
     document.addEventListener("DOMContentLoaded", function() {
-        var readList = JSON.parse(localStorage.getItem('read_announcements') || '[]');
+        var readList = JSON.parse(localStorage.getItem(storageKey) || '[]');
+        
         readList.forEach(function(id) {
             var badge = document.getElementById('badge-' + id);
             if(badge) {
