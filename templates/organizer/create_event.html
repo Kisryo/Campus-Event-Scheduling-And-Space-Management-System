@@ -2,20 +2,8 @@
 
 {% block title %}Create Event{% endblock %}
 
-{% block head %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/eventform.css') }}">
-{% endblock %}
-
 {% block content %}
 <div class="event-form-container" style="max-width: 800px; margin: 0 auto;">
-    
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
 
     <form class="event-form bg-white p-5 rounded shadow-sm" method="POST" action="{{ url_for('organizer_view.create_event') }}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
