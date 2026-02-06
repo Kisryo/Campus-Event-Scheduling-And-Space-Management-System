@@ -4,17 +4,18 @@
 
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin_dashboard.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 {% endblock %}
 
 {% block content %}
 <div class="container">
-    
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         {% for category, message in messages %}
           <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
             {{ message }}
-            <button type="button" class="close" zdata-dismiss="alert" aria-label="Close">
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
           </div>
@@ -35,7 +36,7 @@
                     <p class="text-muted mb-2">Administrator | {{ admin.admin_email }}</p>
                     
                     <form method="POST" action="{{ url_for('admin_view.admin_home') }}" class="form-inline">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <input type="hidden" name="name" value="{{ admin.admin_name }}">
                         <input type="hidden" name="email" value="{{ admin.admin_email }}">
                         
@@ -54,9 +55,37 @@
         </div>
     </div>
 
-    <h5 class="mb-3 text-gray-800 font-weight-bold">System Management</h5>
-    <div class="row">
+    <div class="row mb-4">
         
+        <div class="col-lg-6 mb-4 mb-lg-0">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
+                    <h6 class="m-0 font-weight-bold text-primary">User Demographics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:200px; width:100%">
+                        <canvas id="userChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow h-100">
+                <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between bg-white">
+                    <h6 class="m-0 font-weight-bold text-success">Booking Statistics</h6>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container" style="position: relative; height:200px; width:100%">
+                        <canvas id="bookingChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h5 class="mb-3 text-gray-800 font-weight-bold">System Management</h5>
+
+    <div class="row">
         <div class="col-lg-4 col-md-6 mb-4">
             <div class="card h-100 py-2 border-left-warning shadow-sm">
                 <div class="card-body text-center">
@@ -132,4 +161,115 @@
 
     </div>
 </div>
+
+<script>
+    // --- Chart 1: User Demographics (Doughnut) ---
+    var ctxUser = document.getElementById('userChart').getContext('2d');
+    var userChart = new Chart(ctxUser, {
+        type: 'doughnut',
+        data: {
+            labels: ['Students', 'Lecturers', 'Organizers'],
+            datasets: [{
+                data: [
+                    {{ stats.chart_users.Students }}, 
+                    {{ stats.chart_users.Lecturers }}, 
+                    {{ stats.chart_users.Organizers }}
+                ],
+                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc'],
+                hoverBackgroundColor: ['#2e59d9', '#17a673', '#2c9faf'],
+                hoverBorderColor: "rgba(234, 236, 244, 1)",
+            }],
+        },
+        options: {
+            maintainAspectRatio: false,
+            legend: { position: 'right', labels: { fontSize: 11, boxWidth: 10 } },
+            cutoutPercentage: 70,
+        },
+    });
+
+    // --- Chart 2: Booking vs Equipment (Grouped Bar) ---
+    var ctxBooking = document.getElementById('bookingChart').getContext('2d');
+    var bookingChart = new Chart(ctxBooking, {
+        type: 'bar',
+        data: {
+            labels: ['Approved', 'Pending', 'Rejected'], // X-Axis Labels
+            datasets: [
+                {
+                    label: "Venue", // Bar 1 Name
+                    data: [
+                        {{ stats.chart_venue[0] }}, // Venue Approved
+                        {{ stats.chart_venue[1] }}, // Venue Pending
+                        {{ stats.chart_venue[2] }}  // Venue Rejected
+                    ],
+                    backgroundColor: '#4e73df', // Blue for Venue
+                    hoverBackgroundColor: '#2e59d9',
+                    borderRadius: 5, // Rounded corners for modern look
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
+                },
+                {
+                    label: "Equipment", // Bar 2 Name
+                    data: [
+                        {{ stats.chart_equip[0] }}, // Equip Approved
+                        {{ stats.chart_equip[1] }}, // Equip Pending
+                        {{ stats.chart_equip[2] }}  // Equip Rejected
+                    ],
+                    backgroundColor: '#f6c23e', // Yellow/Orange for Equipment
+                    hoverBackgroundColor: '#dda20a',
+                    borderRadius: 5,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.8
+                }
+            ],
+        },
+        options: {
+            maintainAspectRatio: false,
+            layout: {
+                padding: { left: 10, right: 25, top: 25, bottom: 0 }
+            },
+            legend: {
+                display: true, // Show legend so they know which color is which
+                position: 'bottom',
+                labels: {
+                    usePointStyle: true,
+                    boxWidth: 8
+                }
+            },
+            scales: {
+                xAxes: [{
+                    gridLines: { display: false, drawBorder: false },
+                    ticks: { maxRotation: 0, maxTicksLimit: 6 }
+                }],
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true,
+                        padding: 10,
+                        stepSize: 1 // Forces integers (no 0.5 bookings)
+                    },
+                    gridLines: {
+                        color: "rgb(234, 236, 244)",
+                        zeroLineColor: "rgb(234, 236, 244)",
+                        drawBorder: false,
+                        borderDash: [2],
+                        zeroLineBorderDash: [2]
+                    }
+                }],
+            },
+            tooltips: {
+                backgroundColor: "rgb(255,255,255)",
+                bodyFontColor: "#858796",
+                titleFontColor: '#6e707e',
+                borderColor: '#dddfeb',
+                borderWidth: 1,
+                xPadding: 15,
+                yPadding: 15,
+                displayColors: true,
+                intersect: false,
+                mode: 'index',
+                caretPadding: 10,
+            }
+        },
+    });
+</script>
+
 {% endblock %}
