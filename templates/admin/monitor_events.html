@@ -3,189 +3,247 @@
 
 {% block head %}
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
-    /* --- 1. CALENDAR CONTAINER --- */
-#calendar {
-max-width: 100%;
-margin: 0 auto;
-background: #ffffff;
-padding: 32px;
-border-radius: 18px;
-min-height: 850px;
-font-family: 'Nunito', sans-serif;
+    /* =========================================
+       GLOBAL VARIABLES
+       ========================================= */
+    :root {
+        --text-dark: #1e293b;
+        --text-gray: #64748b;
+        --bg-body: #f8fafc; /* Slightly lighter background */
+        
+        /* Theme Colors for Events (Light BG + Dark Border) */
+        --evt-blue-bg: #eff6ff;   --evt-blue-border: #2563eb;   --evt-blue-text: #1e40af;
+        --evt-green-bg: #f0fdf4;  --evt-green-border: #16a34a;  --evt-green-text: #166534;
+        --evt-purple-bg: #faf5ff; --evt-purple-border: #9333ea; --evt-purple-text: #6b21a8;
+        --evt-orange-bg: #fff7ed; --evt-orange-border: #ea580c; --evt-orange-text: #9a3412;
+    }
 
-/* Modern soft shadow */
-box-shadow:
-0 12px 30px rgba(0, 0, 0, 0.06),
-0 2px 6px rgba(0, 0, 0, 0.04);
-}
+    body {
+        font-family: 'Inter', sans-serif;
+        background-color: var(--bg-body);
+    }
 
-/* ==============================
-   HEADER TOOLBAR
-================================ */
-.fc-toolbar {
-    margin-bottom: 1.5rem !important;
-}
+    /* =========================================
+       PAGE LAYOUT & CENTERING
+       ========================================= */
+    /* Wrapper to center content and define max width */
+    .calendar-page-wrapper {
+        max-width: 1400px; /* Adjust width as desired */
+        margin: 2rem auto; /* Center horizontally, margin top/bottom */
+        padding: 0 20px;   /* Safety padding on small screens */
+    }
 
-.fc-toolbar-title {
-    font-size: 1.9rem !important;
-    font-weight: 800;
-    color: #4e73df;
-    letter-spacing: -0.6px;
-}
+    /* Page Header Styling */
+    .page-header {
+        margin-bottom: 1.5rem; /* Reduced spacing below header */
+    }
+    .page-header h2 {
+        font-weight: 800;
+        color: var(--text-dark);
+        letter-spacing: -0.5px;
+        font-size: 2.2rem;
+        margin-bottom: 0.5rem;
+    }
+    .page-header p {
+        color: var(--text-gray);
+        font-size: 1.05rem;
+    }
 
-/* Buttons */
-.fc-button {
-    border-radius: 10px !important;
-    font-weight: 600;
-    padding: 6px 18px !important;
-}
+    /* =========================================
+       CALENDAR CONTAINER (Glassmorphism)
+       ========================================= */
+    #calendar {
+        background: rgba(255, 255, 255, 0.85); /* Slightly more transparent */
+        backdrop-filter: blur(25px);
+        -webkit-backdrop-filter: blur(25px);
+        padding: 35px; /* Slightly reduced padding */
+        border-radius: 24px;
+        
+        /* Enhanced shadow for depth against the light background */
+        box-shadow: 
+            0 25px 50px -12px rgba(0, 0, 0, 0.1), 
+            0 10px 15px -3px rgba(0, 0, 0, 0.04);
+        
+        border: 1px solid rgba(255, 255, 255, 1);
+    }
 
-.fc-button-primary {
-    background-color: #4e73df !important;
-    border-color: #4e73df !important;
-    box-shadow: 0 2px 6px rgba(78, 115, 223, 0.25);
-}
+    /* =========================================
+       HEADER TOOLBAR & BUTTONS
+       ========================================= */
+    .fc-toolbar {
+        margin-bottom: 2.5rem !important;
+    }
 
-.fc-button-primary:hover {
-    background-color: #2e59d9 !important;
-    box-shadow: 0 6px 14px rgba(78, 115, 223, 0.35);
-    transform: translateY(-1px);
-}
+    .fc-toolbar-title {
+        font-size: 1.75rem !important;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
 
-.fc-button-active {
-    background-color: #224abe !important;
-    box-shadow: inset 0 0 0 2px rgba(255,255,255,0.15);
-}
+    .fc-button {
+        border-radius: 10px !important;
+        padding: 10px 20px !important;
+        font-weight: 600;
+        text-transform: capitalize;
+        border: none !important;
+        box-shadow: none !important;
+        transition: all 0.2s ease;
+        font-size: 0.95rem;
+    }
 
-/* ==============================
-   DAY HEADERS (MON, TUE…)
-================================ */
-.fc-col-header-cell {
-    background: linear-gradient(180deg, #f8f9fc, #ffffff);
-    padding: 14px 0 !important;
-    border-bottom: 2px solid #e3e6f0 !important;
-}
+    /* Inactive Buttons */
+    .fc-button-primary {
+        background-color: rgba(255,255,255,0.5) !important;
+        color: var(--text-gray) !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    .fc-button-primary:hover {
+        background-color: #ffffff !important;
+        border-color: #cbd5e1 !important;
+        transform: translateY(-2px);
+    }
 
-.fc-col-header-cell-cushion {
-    color: #858796;
-    font-size: 0.8rem;
-    font-weight: 800;
-    letter-spacing: 1.2px;
-    text-transform: uppercase;
-    text-decoration: none !important;
-}
+    /* Active Button */
+    .fc-button-active {
+        background-color: #2563eb !important;
+        color: white !important;
+        box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.4) !important;
+        border: none !important;
+    }
 
-/* ==============================
-   DAY GRID CELLS
-================================ */
-.fc-daygrid-day {
-    transition: background-color 0.2s ease;
-}
+    /* =========================================
+       GRID STYLING
+       ========================================= */
+    .fc-col-header-cell {
+        background-color: #e0f2fe !important; /* Light Blue Header Background */
+        padding: 15px 0 !important;
+        border: none !important;
+        border-bottom: 2px solid #bae6fd !important;
+    }
+    
+    .fc-col-header-cell-cushion {
+        color: var(--text-gray);
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 2px;
+        font-weight: 800;
+        text-decoration: none !important;
+    }
 
-.fc-daygrid-day:hover {
-    background-color: #f9fafc;
-}
+    .fc-daygrid-day {
+        border: 1px solid #f8fafc !important;
+        transition: background-color 0.2s;
+    }
+    .fc-daygrid-day:hover {
+        background-color: rgba(248, 250, 252, 0.5);
+    }
 
-.fc-daygrid-day-number {
-    color: #5a5c69;
-    font-weight: 700;
-    font-size: 0.9rem;
-    padding: 6px 10px !important;
-    text-decoration: none !important;
-}
+    .fc-daygrid-day-number {
+        color: var(--text-dark);
+        font-weight: 600;
+        padding: 12px !important;
+        text-decoration: none !important;
+        font-size: 0.9rem;
+    }
 
-/* ==============================
-   TODAY HIGHLIGHT
-================================ */
-.fc-day-today {
-    background-color: #eef4ff !important;
-}
+    /* Today Highlight */
+    .fc-day-today { background-color: transparent !important; }
+    .fc-day-today .fc-daygrid-day-number {
+        background-color: #2563eb;
+        color: white;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 8px;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
 
-.fc-day-today .fc-daygrid-day-number {
-    background-color: #4e73df;
-    color: #ffffff;
-    border-radius: 999px;
-    width: 28px;
-    height: 28px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin: 4px;
-    font-size: 0.85rem;
-}
+    /* =========================================
+       EVENT STYLE
+       ========================================= */
+    .fc-event {
+        border: none !important;
+        border-radius: 6px !important;
+        padding: 6px 8px;
+        margin: 3px 6px;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        transition: all 0.2s ease;
+        /* Default fallback */
+        background-color: #eff6ff;
+        border-left: 4px solid var(--evt-blue-border) !important;
+    }
 
-/* ==============================
-   EVENT CARDS
-================================ */
-.fc-event {
-    border: none !important;
-    border-radius: 8px;
-    padding: 5px 8px;
-    margin-bottom: 5px;
-    font-size: 0.82rem;
-    font-weight: 600;
-    cursor: pointer;
+    .fc-event:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+    }
 
-    background: linear-gradient(135deg, #4e73df, #6f8cf3);
-    color: #ffffff;
+    .fc-event-main {
+        display: flex;
+        flex-direction: column;
+        color: var(--evt-blue-text);
+        gap: 2px;
+    }
 
-    box-shadow:
-        0 2px 4px rgba(0,0,0,0.08),
-        0 1px 2px rgba(0,0,0,0.05);
+    .fc-event-time {
+        font-size: 0.75rem;
+        font-weight: 800;
+        display: block;
+        opacity: 0.9;
+    }
 
-    transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease,
-        filter 0.15s ease;
-}
+    .fc-event-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        line-height: 1.2;
+    }
 
-.fc-event:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
-    filter: brightness(0.95);
-}
+    /* --- Color Themes --- */
+    .evt-theme-blue { background-color: var(--evt-blue-bg) !important; border-left-color: var(--evt-blue-border) !important; }
+    .evt-theme-blue .fc-event-main { color: var(--evt-blue-text) !important; }
 
-/* Time text */
-.fc-event-time {
-    font-weight: 800;
-    margin-right: 4px;
-    opacity: 0.95;
-}
+    .evt-theme-green { background-color: var(--evt-green-bg) !important; border-left-color: var(--evt-green-border) !important; }
+    .evt-theme-green .fc-event-main { color: var(--evt-green-text) !important; }
 
-.fc-event-title {
-    font-weight: 600;
-}
+    .evt-theme-purple { background-color: var(--evt-purple-bg) !important; border-left-color: var(--evt-purple-border) !important; }
+    .evt-theme-purple .fc-event-main { color: var(--evt-purple-text) !important; }
 
-/* ==============================
-   MORE EVENTS LINK
-================================ */
-.fc-daygrid-more-link {
-    font-weight: 700;
-    font-size: 0.75rem;
-    color: #4e73df;
-}
+    .evt-theme-orange { background-color: var(--evt-orange-bg) !important; border-left-color: var(--evt-orange-border) !important; }
+    .evt-theme-orange .fc-event-main { color: var(--evt-orange-text) !important; }
 
-/* ==============================
-   LEGEND / BADGES (Optional)
-================================ */
-.status-badge {
-    font-size: 0.8rem;
-    font-weight: 600;
-    padding: 6px 14px;
-    border-radius: 999px;
-}
+    /* Remove link underline */
+    a { text-decoration: none !important; }
 
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-4 mb-5">
+<div class="calendar-page-wrapper">
     
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show mb-4" role="alert">
+            {{ message }}
+            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <div class="d-flex justify-content-between align-items-center page-header">
         <div>
-            <h2 class="font-weight-bold text-gray-800 mb-1">Monitor Event Schedule</h2>
-            <p class="text-muted small mb-0">Overview of all approved and upcoming campus activities.</p>
+            <h2>Event Dashboard</h2>
+            <p class="mb-0">Overview of all approved and upcoming campus activities.</p>
         </div>
     </div>
 
@@ -194,13 +252,18 @@ box-shadow:
 </div>
 
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js'></script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
 
         var calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            themeSystem: 'bootstrap',
+            themeSystem: 'standard', 
+            
+            // UPDATED: Use aspectRatio instead of fixed height for better responsiveness.
+            // A higher number makes it wider relative to its height.
+            height: 'auto',
             
             // --- HEADER TOOLBAR ---
             headerToolbar: {
@@ -210,13 +273,11 @@ box-shadow:
             },
             
             // --- SETTINGS ---
-            height: 'auto',
-            navLinks: true, 
-            editable: false, 
+            navLinks: true,
+            editable: false,
             dayMaxEvents: true,
-
-            // --- TIME FORMATTING (NEW) ---
-            // This forces the time to show as "8:56 AM"
+            
+            // --- TIME FORMATTING ---
             eventTimeFormat: { 
                 hour: 'numeric',
                 minute: '2-digit',
@@ -226,11 +287,20 @@ box-shadow:
             // --- DATA SOURCE ---
             events: "{{ url_for('admin_view.get_calendar_events') }}",
 
-            // --- HOVER TOOLTIP ---
+            // --- COLOR INJECTION LOGIC ---
             eventDidMount: function(info) {
-                var tooltip = "Venue: " + info.event.extendedProps.venue + 
-                              "\nStatus: " + info.event.extendedProps.status;
-                info.el.setAttribute('title', tooltip);
+                // 1. Tooltip
+                var tooltipText = "Event: " + info.event.title + 
+                                  "\nVenue: " + info.event.extendedProps.venue + 
+                                  "\nStatus: " + info.event.extendedProps.status;
+                info.el.setAttribute('title', tooltipText);
+
+                // 2. Random Color Assigner based on title length
+                var titleLength = info.event.title.length;
+                var themes = ['evt-theme-blue', 'evt-theme-green', 'evt-theme-purple', 'evt-theme-orange'];
+                var randomTheme = themes[titleLength % themes.length];
+                
+                info.el.classList.add(randomTheme);
             },
 
             // --- CLICK ACTION ---
