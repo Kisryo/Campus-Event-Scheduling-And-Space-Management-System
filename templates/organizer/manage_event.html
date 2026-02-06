@@ -2,6 +2,28 @@
 {% block title %}Manage Event | {{ event.title }}{% endblock %}
 
 {% block content %}
+
+<style>
+    /* Default Tab Text Color (Blue) */
+    #manageTabs .nav-link {
+        color: #4e73df !important; /* Bootstrap Primary Blue or custom hex */
+        font-weight: 600;
+    }
+
+    /* Hover State (Darker Blue) */
+    #manageTabs .nav-link:hover {
+        color: #224abe !important;
+    }
+
+    /* Active Tab Text Color (Dark Blue/Black to indicate selection) */
+    #manageTabs .nav-link.active {
+        color: #2e59d9 !important;
+        font-weight: bold;
+        background-color: #fff; /* Ensure background is white */
+        border-bottom-color: transparent;
+    }
+</style>
+
 <div class="container">
     
     <div class="d-flex justify-content-between align-items-center mb-3">
@@ -42,17 +64,6 @@
         </a>
     </div>
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show">
-            {{ message }}
-            <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
-          </div>
-        {% endfor %}
-      {% endif %}
-    {% endwith %}
-
     {% set is_editable = (event.event_status == 'Pending') %}
 
     <ul class="nav nav-tabs mb-4" id="manageTabs" role="tablist">
@@ -85,17 +96,32 @@
                 </div>
                 
                 <div class="form-row">
-                    <div class="col-md-6">
-                         <label class="font-weight-bold">Capacity</label>
-                         <input type="number" name="capacity" class="form-control" value="{{ event.capacity }}" {{ 'disabled' if not is_editable }}>
+                    <div class="col-md-4">
+                        <label class="font-weight-bold">Capacity</label>
+                        <input type="number" name="capacity" class="form-control" value="{{ event.capacity }}" {{ 'disabled' if not is_editable }}>
                     </div>
-                    <div class="col-md-6">
-                        <label class="font-weight-bold">Update Poster Image</label>
-                        <input type="file" name="event_img" class="form-control-file border p-1 rounded" {{ 'disabled' if not is_editable }}>
-                        {% if event.event_img %}
-                            <small class="text-muted d-block mt-1">Current: {{ event.event_img }}</small>
-                        {% endif %}
+                    
+                    <div class="col-md-4">
+                        <label class="font-weight-bold">Start Date & Time</label>
+                        <input type="datetime-local" name="start_datetime" class="form-control" 
+                            value="{{ event.start_datetime.strftime('%Y-%m-%dT%H:%M') }}" 
+                            {{ 'disabled' if not is_editable }}>
                     </div>
+
+                    <div class="col-md-4">
+                        <label class="font-weight-bold">End Date & Time</label>
+                        <input type="datetime-local" name="end_datetime" class="form-control" 
+                            value="{{ event.end_datetime.strftime('%Y-%m-%dT%H:%M') }}" 
+                            {{ 'disabled' if not is_editable }}>
+                    </div>
+                </div>
+
+                <div class="form-group mt-3">
+                    <label class="font-weight-bold">Update Poster Image</label>
+                    <input type="file" name="event_img" class="form-control-file border p-1 rounded" {{ 'disabled' if not is_editable }}>
+                    {% if event.event_img %}
+                        <small class="text-muted d-block mt-1">Current: {{ event.event_img }}</small>
+                    {% endif %}
                 </div>
 
                 <div class="mt-3 text-muted small">
