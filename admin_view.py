@@ -378,15 +378,35 @@ def manage_announcements():
         title = request.form.get('title')
         message = request.form.get('message')
         target = request.form.get('target')
+        
+        # Validation for "Specific User"
+        if target == 'Specific':
+            recipient_id = request.form.get('recipient_id').strip()
+            
+            # Check if this ID exists in any of the user tables
+            user_found = (
+                Student.query.get(recipient_id) or 
+                Organizer.query.get(recipient_id) or 
+                Lecturer.query.get(recipient_id) or
+                Admin.query.get(recipient_id)
+            )
+            
+            if not user_found:
+                flash(f'User ID "{recipient_id}" not found. Please check the ID.', 'danger')
+                return redirect(url_for('admin_view.manage_announcements'))
+            
+            # If found, override target with the specific ID
+            target = recipient_id
 
         if not message or not title:
-            flash('Message cannot be empty', 'danger')
+            flash('Message and Title cannot be empty', 'danger')
         else:
             new_announcement = Announcements(
                 title=title,
                 message=message,
-                target_audience=target,
-                admin_id=current_user.admin_id
+                target_audience=target,  # Stores 'All', 'Student', or specific ID
+                admin_id=current_user.admin_id,
+                sent_at=datetime.now()
             )
             db.session.add(new_announcement)
             db.session.commit()
@@ -394,6 +414,7 @@ def manage_announcements():
             
         return redirect(url_for('admin_view.manage_announcements'))
 
+    # Fetch history
     history = Announcements.query.filter_by(admin_id=current_user.admin_id).order_by(Announcements.sent_at.desc()).all()
     return render_template("admin/manage_announcements.html", history=history)
 
@@ -548,7 +569,7 @@ def manage_categories():
     return render_template("admin/manage_categories.html", categories=categories)
 
 # ========================================================
-# 9. DELETE EVENT (Admin Action)
+#11. DELETE EVENT (Admin Action)
 # ========================================================
 @admin_view.route('/event/<int:event_id>/delete', methods=['POST'])
 @login_required
