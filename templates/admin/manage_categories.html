@@ -1,41 +1,183 @@
 {% extends 'admin/base_admin.html' %}
 {% block title %}Manage Categories{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
-    <h2>Manage Event Categories</h2>
+    <h2><i class="fas fa-tags mr-2"></i>Manage Event Categories</h2>
     {% include 'flash_messages.html' %}
-    
-    <div class="row mb-3">
-        <div class="col-md-6">
+
+    <div class="row mb-4">
+        <div class="col-md-6 mb-2">
             <form class="form-inline" method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <input type="hidden" name="action" value="add">
-                <input type="text" name="category_name" class="form-control mr-2" placeholder="New Category Name">
-                <button class="btn btn-success">Add</button>
+                <input type="hidden" name="action" value="add"/>
+                <input type="text" name="category_name" class="form-control mr-2 mb-2" placeholder="New Category Name" required/>
+                <button class="btn btn-success mb-2"><i class="fas fa-plus mr-1"></i> Add</button>
             </form>
         </div>
-        <div class="col-md-6 text-right">
-            <form class="form-inline float-right">
-                <input type="search" name="search" class="form-control mr-2" placeholder="Search categories">
-                <button class="btn btn-outline-secondary">Filter</button>
+        <div class="col-md-6 mb-2 d-flex justify-content-md-end">
+            <form class="form-inline">
+                <input type="search" name="search" class="form-control mr-2 mb-2" placeholder="Search categories"/>
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-search"></i>
+                </button>
             </form>
         </div>
     </div>
 
     <ul class="list-group">
         {% for c in categories %}
-        <li class="list-group-item d-flex justify-content-between align-items-center">
-            <form method="POST" class="form-inline w-100">
+        <li class="list-group-item">
+            <form method="POST">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <input type="hidden" name="category_id" value="{{ c.category_id }}">
-                
-                <input type="text" name="category_name" value="{{ c.category_name }}" class="form-control mr-2">
-                
-                <button type="submit" name="action" value="edit" class="btn btn-primary btn-sm mr-1">Update</button>
-                <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm" onclick="return confirm('Delete category?');">Delete</button>
+                <input type="hidden" name="category_id" value="{{ c.category_id }}"/>
+
+                <input type="text" name="category_name" value="{{ c.category_name }}" class="form-control"/>
+                <button type="submit" name="action" value="edit" class="btn btn-primary btn-sm"><i class="fas fa-save mr-1"></i> Update</button>
+                <button type="submit" name="action" value="delete" class="btn btn-danger btn-sm" onclick="return confirm('Delete category?');"><i class="fas fa-trash mr-1"></i> Delete</button>
             </form>
         </li>
         {% endfor %}
     </ul>
 </div>
+
+<style>
+/* ===========================
+   GENERAL CONTAINER
+=========================== */
+.container {
+    max-width: 900px;
+}
+
+/* ===========================
+   HEADINGS
+=========================== */
+h2 {
+    font-weight: 700;
+    margin-bottom: 25px;
+    color: #1f2937;
+}
+
+/* ===========================
+   ALERTS
+=========================== */
+.alert {
+    border-radius: 12px;
+    font-size: 0.95rem;
+}
+
+/* ===========================
+   FORM INPUTS
+=========================== */
+.form-control {
+    border-radius: 12px;
+    box-shadow: none;
+    border: 1px solid #d1d5db;
+    transition: all 0.2s ease;
+}
+
+.form-control:focus {
+    border-color: #4e73df;
+    box-shadow: 0 0 0 0.2rem rgba(78, 115, 223, 0.25);
+}
+
+/* ===========================
+   BUTTONS
+=========================== */
+.btn-success {
+    border-radius: 25px;
+    padding: 6px 18px;
+    font-weight: 600;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: #fff;
+    transition: all 0.2s ease;
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #059669, #10b981);
+    transform: translateY(-1px);
+}
+
+.btn-primary {
+    border-radius: 20px;
+    background: linear-gradient(135deg, #4e73df, #6f8cf3);
+    border: none;
+    color: #fff;
+    transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #6f8cf3, #4e73df);
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    border-radius: 20px;
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border: none;
+    color: #fff;
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+    transform: translateY(-1px);
+}
+.btn-blue-search {
+    border-radius: 25px;
+    padding: 6px 16px;
+}
+
+.btn-blue-search:hover {
+    background-color: #2563eb;
+    transform: translateY(-2px);
+}
+
+/* ===========================
+   CARD-LIKE LIST
+=========================== */
+.list-group-item {
+    border-radius: 12px;
+    margin-bottom: 10px;
+    padding: 12px 18px;
+    background: #ffffff;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.05);
+    transition: all 0.2s ease;
+}
+
+.list-group-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.1);
+}
+
+/* ===========================
+   FORM INLINE IN LIST ITEM
+=========================== */
+.list-group-item form {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 8px;
+}
+
+.list-group-item input.form-control {
+    flex: 1 1 auto;
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+@media (max-width: 576px) {
+    .form-inline {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .form-inline input, .form-inline button {
+        width: 100%;
+        margin-bottom: 8px;
+    }
+}
+</style>
+
 {% endblock %}
